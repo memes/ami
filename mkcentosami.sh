@@ -5,62 +5,52 @@
 #
 # $Id: $
 
-NO_TEST=${NO_TEST:-""}
-NO_TEST_LAUNCH=${NO_TEST_LAUNCH:-""}
 CENTOS_VER=${CENTOS_VER:-5.5}
-AMI_ARCH=${AMI_ARCH:-i386}
 MIRROR_URL=${MIRROR_URL:-"http://mirror.centos.org/centos/${CENTOS_VER}"}
-BASEDIR=${BASEDIR:-"$(pwd)/centos_${CENTOS_VER}_${AMI_ARCH}"}
+WORKINGDIR=${WORKINGDIR:-"$(pwd)"}
 MOUNTDIR=${MOUNTDIR:-"$(pwd)/centos_${CENTOS_VER}_${AMI_ARCH}.mnt"}
 ROOT_PKGS=${ROOT_PKGS:-"yum-utils"}
-BASE_PKGS=${BASE_PKGS:-"passwd vim-minimal sudo openssh-server man shadow-utils authconfig dhclient postfix"}
-EXTRA_PKGS=${EXTRA_PKGS:-"subversion mercurial"}
-# Use a random password for memes account; public key SSH only
-MEMES_PASSWORD=$(dd if=/dev/urandom bs=1 count=8 | base64)
+BASE_PKGS=${BASE_PKGS:-"passwd vim-minimal sudo openssh-server man shadow-utils authconfig dhclient postfix which"}
+EXTRA_PKGS=${EXTRA_PKGS:-"git s3cmd"}
 
-# Source the common functions
-[ -r "$(dirname $0)/ami_functions.sh" ] && . $(dirname $0)/ami_functions.sh
-[ -r "$(dirname $0)/../ami_functions.sh" ] && \
-    . $(dirname $0)/../ami_functions.sh
-type add_memes_keys >/dev/null 2>/dev/null
-if [ $? -ne 0 ]; then
-    echo "$0: Error: required functions in ami_functions are not available" >&2
-    exit 1
-fi
+# Return the directory to use for base install
+distro_get_base_directory()
+{
+    echo "${WORKINGDIR}/centos_${CENTOS_VER}_${AMI_ARCH}"
+}
 
-script_version="$(basename $0)"
+# Return the mount point to use for images
+distro_get_img_mount_point()
+{
+    echo "${MOUNTDIR}"
+}
 
-# Make sure environment is correct and ROOT_PKGS are specified
-ec2_validate
-prebuild_validate
-[ -z "${ROOT_PKGS}" ] && error "No root packages specified in \${ROOT_PKGS}"
-
-# After execution remount /home without dev support and unbind shared systems
-trap cleanup 0 1 2 3 15
-
-# Prepare $BASEDIR for installation
-rm_chroot "${BASEDIR}"
-mkdir -p "${BASEDIR}/etc/yum.repos.d"
-[ -d "${BASEDIR}/etc/yum.repos.d" ] || \
-    error "preparing to install: ${BASEDIR}/etc/yum.repos.d does not exist"
-
-# Prepare for yum installation
-if [ "i386" = "${AMI_ARCH}" ]; then
-    # Force i386 installation because the host may be x86_64
-    EXCLUDE="--exclude '*.x86_64'"
-    sudo mkdir -p "${BASEDIR}/etc/rpm"
-    [ -d "${BASEDIR}/etc/rpm" ] || \
-	    error "preparing to install: ${BASEDIR}/etc/rpm does not exist"
-    sudo sh -c "echo \"i686-memes-linux-gnu\" >> \"${BASEDIR}/etc/rpm/platform\""
-    [ -s "${BASEDIR}/etc/rpm/platform" ] || \
-	    error "preparing to install: ${BASEDIR}/etc/rpm/platform is missing or empty"
-fi
-if [ "x86_64" = "${AMI_ARCH}" ]; then
-    # Try to keep the install pure x86_64; exclude i386 packages by default
-    EXCLUDE="--exclude '*.i?86'"
-fi
-
-cat > "/tmp/yum.conf" <<EOF
+# Prepare base for installation
+distro_prepare_base()
+{
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && error "distro_prepare_base: \$base is unspecified"
+    [ -d "${base}" ] || error "distro_prepare_base: ${base} is invalid"
+    mkdir -p "${base}/etc/yum.repos.d"
+    [ -d "${base}/etc/yum.repos.d" ] || \
+        error "distro_prepare_base: ${base}/etc/yum.repos.d does not exist"
+    # Prepare for yum installation
+    if [ "i386" = "${AMI_ARCH}" ]; then
+        # Force i386 installation because the host may be x86_64
+        EXCLUDE="--exclude '*.x86_64'"
+        ${SUDO} mkdir -p "${base}/etc/rpm"
+        [ -d "${base}/etc/rpm" ] || \
+            error "distro_prepare_base: ${base}/etc/rpm does not exist"
+        ${SUDO} sh -c "echo \"i686-memes-linux-gnu\" >> \"${base}/etc/rpm/platform\""
+        [ -s "${base}/etc/rpm/platform" ] || \
+            error "distro_prepare_base: ${base}/etc/rpm/platform is missing or empty"
+    fi
+    if [ "x86_64" = "${AMI_ARCH}" ]; then
+        # Try to keep the install pure x86_64; exclude i386 packages by default
+        EXCLUDE="--exclude '*.i?86'"
+    fi
+    cat > "/tmp/yum.conf" <<EOF
 [main]
 cachedir=/var/cache/yum
 persistdir=/var/lib/yum
@@ -77,8 +67,7 @@ distroverpkg=redhat-release
 reposdir=/etc/yum.repos.d
 plugins=1
 EOF
-
-sudo sh -c "cat > \"${BASEDIR}/etc/yum.repos.d/memes.repo\"" <<EOF
+    ${SUDO} sh -c "cat > \"${base}/etc/yum.repos.d/memes.repo\"" <<EOF
 # Repositories to use during installation that are certain to be the
 # architecture wanted, not the architecture of the host machine
 [memes_os]
@@ -101,18 +90,27 @@ enabled=1
 gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL
 EOF
+    # Install minimum set of packages in order to get functional system
+    # Note: these will need to be reinstalled within the chroot to resolve
+    # host/chroot rpm/yum/db differences
+    ${SUDO} yum -c /tmp/yum.conf -y --installroot="${base}" ${EXCLUDE} \
+        --disablerepo="*" --enablerepo="memes*" install ${ROOT_PKGS}
+    ${SUDO} rm -rf "${base}/root/.rpmdb"
+}
 
-# Install minimum set of packages in order to get functional system
-# Note: these will need to be reinstalled within the chroot to resolve
-# host/chroot rpm/yum/db differences
-sudo yum -c /tmp/yum.conf -y --installroot="${BASEDIR}" ${EXCLUDE} \
-    --disablerepo="*" --enablerepo="memes*" install ${ROOT_PKGS}
-sudo rm -rf "${BASEDIR}/root/.rpmdb"
 
 # The install above may have used different db version for RPM, so reinstall
 # everything in the chroot to make sure the environment is configured correctly
-prepare_chroot "${BASEDIR}"
-sudo chroot "${BASEDIR}" <<EOF
+distro_prepare_chroot()
+{
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && error "distro_prepare_chroot: \$base is unspecified"
+    [ -d "${base}" ] || error "distro_prepare_chroot: ${base} is invalid"
+    ${SUDO} chroot "${base}" <<EOF
+# Recreate required devices
+/sbin/MAKEDEV -a mem null port zero core full ram tty console random urandom
+
 # prepare for reinstall of packages
 touch /etc/mtab
 rpm --initdb
@@ -162,12 +160,19 @@ ldconfig
 # etc
 rpm -Uvh --nosignature \
     http://download.fedora.redhat.com/pub/epel/5/${AMI_ARCH}/epel-release-5-4.noarch.rpm
-# Recreate required devices
-/sbin/MAKEDEV -a mem null port zero core full ram tty console random urandom
 
 # Enable networking
 cat > /etc/sysconfig/network <<eof
 NETWORKING=yes
+HOSTNAME=localhost.localdomain
+NOZEROCONF=yes
+NETWORKING_IPV6=no
+IPV6_INIT=no
+IPV6_ROUTER=no
+IPV6_AUTOCONF=no
+IPV6FORWARDING=no
+IPV6TO4INIT=no
+IPV6_CONTROL_RADVD=no
 eof
 cat > /etc/sysconfig/network-scripts/ifcfg-eth0 <<eof
 DEVICE=eth0
@@ -179,19 +184,11 @@ PEERDNS=yes
 IPV6INIT=no
 eof
 cat > /etc/hosts <<eof
-127.0.0.1       localhost
-# IPv6 entries
-::1     localhost ip6-localhost ip6-loopback
-fe00::0 ip6-localnet
-ff00::0 ip6-mcastprefix
-ff02::1 ip6-allnodes
-ff02::2 ip6-allrouters
-ff02::3 ip6-allhosts
+127.0.0.1       localhost localhost.localdomain
 eof
 
 # Update sudoers file
 cat >> /etc/sudoers <<eof
-aaxis ALL=(ALL) ALL
 # memes password is random, so don't prompt for sudo
 memes ALL=(ALL) NOPASSWD:ALL
 eof
@@ -202,27 +199,31 @@ authconfig --enablemd5 --enableshadow --updateall
 # Install the extra packages
 [ -n "${EXTRA_PKGS}" ] && yum -y ${EXCLUDE} install ${EXTRA_PKGS}
 
+# Configure SELinux for permissive mode, if config file is present
+# This allows future use of SElinux, but doesn't enforce current rules
+if [ -s /etc/selinux/config ]; then
+    cp /etc/selinux/config /tmp/selinux-config
+    sed -e'/^SELINUX=/cSELINUX=permissive' /tmp/selinux-config > /etc/selinux/config
+    rm -f /tmp/selinux-config
+fi
+
 # Make sure rsyslog, networking and email services are enabled
 chkconfig --level 2345 rsyslog on
 chkconfig --level 2345 network on
 chkconfig --level 2345 postfix on
+# Don't need the runtime management of network and services
+chkconfig --level 2345 NetworkManager off
+chkconfig --level 2345 avahi-daemon off
+chkconfig --level 2345 firstboot off
 
 # Change root password to consistent value across instances, but
 # remote login is permitted only by public SSH key
-echo "REPLACE_ME" | passwd --stdin root
+echo "${ROOT_PASSWORD}" | passwd --stdin root
 mkdir -p /root/.ssh
 touch /root/.ssh/authorized_keys2
 chmod 0700 /root/.ssh
 chmod 0600 /root/.ssh/authorized_keys2
 chown -R root:root /root/.ssh
-
-# Add an Aaxis user for consistent access
-useradd -c "Default Aaxis user" -m aaxis
-mkdir -p /home/aaxis/.ssh
-touch /home/aaxis/.ssh/authorized_keys2
-chmod 0700 /home/aaxis/.ssh
-chmod 0600 /home/aaxis/.ssh/authorized_keys2
-chown -R aaxis:aaxis /home/aaxis/.ssh
 
 # Add memes with random password
 useradd -c "Matthew Emes" -m memes
@@ -233,60 +234,64 @@ chmod 0700 /home/memes/.ssh
 chmod 0600 /home/memes/.ssh/authorized_keys2
 chown -R memes:memes /home/memes/.ssh
 EOF
-
-post_chroot "${BASEDIR}"
-update_fstab "${BASEDIR}"
-update_sshd "${BASEDIR}"
-add_memes_keys "${BASEDIR}"
+}
 
 # Clean up
-sudo rm -f "${BASEDIR}/root/.*history"
-[ -e "${BASEDIR}/etc/rpm/platform" ] && \
-    grep -qa memes "${BASEDIR}/etc/rpm/platform" >/dev/null 2>/dev/null && \
-    sudo rm -f "${BASEDIR}/etc/rpm/platform"
+distro_post_base()
+{
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && error "distro_post_base: \$base is unspecified"
+    [ -d "${base}" ] || error "distro_post_base: ${base} is invalid"
+    ${SUDO} rm -f "${base}/root/.*history"
+    [ -e "${base}/etc/rpm/platform" ] && \
+        grep -q memes "${base}/etc/rpm/platform" >/dev/null 2>/dev/null && \
+        ${SUDO} rm -f "${base}/etc/rpm/platform"
+    [ -e "${base}/etc/rpm/platform" ] && \
+        grep -q memes "${base}/etc/rpm/platform" >/dev/null 2>/dev/null && \
+        error "distro_post_base: ${base}/etc/rpm/platform still exists"
+    return 0
+}
 
-# Prepare an AMI for upload
-ami_img="${BASEDIR}.ec2.img"
-mk_fs_image "${ami_img}" $((1024 * 1024 * 1024))
-mount_img "${MOUNTDIR}"
-sudo rsync -avP "${BASEDIR}/" "${MOUNTDIR}/" || \
-    error "rsync returned error code $?"
-umount_img "${MOUNTDIR}"
-bundle_ami "${ami_img}"
-ami_name="centos_${CENTOS_VER}_${AMI_ARCH}.$(date +%Y%m%d)"
-description="CentOS ${CENTOS_VER} ${AMI_ARCH} created $(date "+%H:%M %Z on %Y/%m/%d") by ${script_version}"
-upload_ami $(basename "${ami_img}") "matthewemes.com/ami" "${ami_name}" "${description}"
+# Return a filename for the AMI image
+distro_get_ami_img_name()
+{
+    echo "${WORKINGDIR}/centos_${CENTOS_VER}_${AMI_ARCH}.ami.img"
+}
 
-# Shall a test image be launched in KVM?
-[ -n "${NO_TEST}" ] && exit
+# Return a name for the AMI
+distro_get_ami_name()
+{
+    echo "centos_${CENTOS_VER}_${AMI_ARCH}.$(date +%Y%m%d)"
+}
 
-# Make a 1Gb test image for KVM verification
-kvm_img="${BASEDIR}.kvm.img"
-mk_disk_image "${kvm_img}" $((1024 * 1024 * 1024))
-mount_img "${MOUNTDIR}"
-sudo rsync -avP "${BASEDIR}/" "${MOUNTDIR}/" || \
-    error "rsync returned error code $?"
+# Return a description for the AMI
+distro_get_ami_description()
+{
+    echo "CentOS ${CENTOS_VER} ${AMI_ARCH} image build of $(date '+%H:%M %Z %m/%d/%y')"
+}
 
-# Modify filesystem for use with KVM
-kvm_compatible_fs "${MOUNTDIR}"
+# Return a filename for the KVM image
+distro_get_kvm_img_name()
+{
+    echo "${WORKINGDIR}/centos_${CENTOS_VER}_${AMI_ARCH}.kvm.img"
+}
 
-# Install a kernel for testing
-prepare_chroot "${MOUNTDIR}"
-sudo chroot "${MOUNTDIR}" yum -y ${EXCLUDE} install kernel
-post_chroot "${MOUNTDIR}"
-
-# Install GRUB and unmount
-mk_bootable "${MOUNTDIR}"
-umount_img "${MOUNTDIR}"
-
-[ -n "${NO_TEST_LAUNCH}" ] && exit
-
-# Launch in KVM
-cleanup
-ismounted "${MOUNTDIR}/proc" && error "${MOUNTDIR}/proc is still mounted"
-ismounted "${MOUNTDIR}/sys" && error "${MOUNTDIR}/sys is still mounted"
-ismounted "${MOUNTDIR}" && error "${MOUNTDIR} is still mounted"
-isloop "${part_dev}" && error "${part_dev} is still active"
-isloop "${img_dev}" && error "${img_dev} is still active"
-
-launch_img "${BASEDIR}.kvm.img"
+# Prepare the kvm filesystem image by installing a kernel
+distro_post_kvm_image()
+{
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && error "distro_post_kvm_image: \$base is unspecified"
+    [ -d "${base}" ] || error "distro_post_kvm_image: ${base} is invalid"
+    ${SUDO} mount --bind /proc "${base}/proc" || \
+        error "distro_post_kvm_image: unable to rebind /proc to ${base}/proc"
+    ${SUDO} mount --bind /sys "${base}/sys" || \
+        error "distro_post_kvm_image: unable to rebind /sys to ${base}/sys"
+    # Install a kernel for testing
+    ${SUDO} chroot "${base}" yum -y ${EXCLUDE} install kernel
+    ${SUDO} umount "${base}/sys" || \
+        error "distro_post_kvm_image: unable to umount ${base}/sys"
+    ${SUDO} umount "${base}/proc" || \
+        error "distro_post_kvm_image: unable to umount ${base}/proc"
+}

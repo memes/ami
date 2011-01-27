@@ -19,7 +19,7 @@ EXTRA_PKGS=${EXTRA_PKGS:-""}
 # Return the directory to use for base install
 distro_get_base_directory()
 {
-    echo "${WORKINGDIR}/centos_${DEBIAN_VER}_${DEBIAN_ARCH}"
+    echo "${WORKINGDIR}/debian_${DEBIAN_VER}_${DEBIAN_ARCH}"
 }
 
 # Return the mount point to use for images
@@ -149,6 +149,7 @@ distro_post_base()
     [ -d "${base}" ] || error "distro_post_base: ${base} is invalid"
     ${SUDO} rm -f "${base}/root/.*history" "${base}/usr/sbin/policy-rc.d" || \
         warn "distro_post_base: error code $? returned while deleting files"
+    return 0s
 }
 
 # Return a filename for the AMI image
