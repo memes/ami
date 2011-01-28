@@ -52,17 +52,24 @@ eof
     git clone http://scm.matthewemes.com/ami.git /home/memes/ami
 cd /home/memes/ami && git pull
 [ -d /home/memes/images ] || mkdir -p /home/memes/images
+update-rc.d -f yum-updatesd remove
 EOF
     local uid=$(awk -F: '/^memes/ {print $3}' "${base}/etc/passwd")
     local gid=$(awk -F: '/^memes/ {print $4}' "${base}/etc/passwd")
     ${SUDO} chown -R ${uid}:${gid} "${base}/home/memes"
-/bin/bash
 }
 
 # Return a filename for the AMI image
 custom_get_ami_img_name()
 {
     echo "${WORKINGDIR}/ami_builder_${AMI_ARCH}.ami.img"
+}
+
+# Return a file size for the AMI image
+custom_get_ami_img_size()
+{
+    # 2Gb should be enough
+    echo $((1024 * 1024 * 1024 * 2))
 }
 
 # Return a name for the AMI
@@ -81,4 +88,11 @@ custom_get_ami_description()
 custom_get_kvm_img_name()
 {
     echo "${WORKINGDIR}/ami_builder_${AMI_ARCH}.kvm.img"
+}
+
+# Return a file size for the KVM image
+custom_get_ami_img_size()
+{
+    # 2Gb should be enough
+    echo $((1024 * 1024 * 1024 * 2))
 }
