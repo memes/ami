@@ -5,6 +5,9 @@
 #
 # $Id: $
 
+[ "x86_64" = "${AMI_ARCH}" ] && DEBIAN_ARCH="amd64"
+[ -z "${DEBIAN_ARCH}" ] && DEBIAN_ARCH="${AMI_ARCH}"
+
 DEBIAN_VER=${DEBIAN_VER:-stable}
 MIRROR_URL=${MIRROR_URL:-"http://ftp.debian.org"}
 WORKINGDIR=${WORKINGDIR:-"$(pwd)"}
@@ -12,9 +15,6 @@ MOUNTDIR=${MOUNTDIR:-"$(pwd)/debian_${DEBIAN_VER}_${DEBIAN_ARCH}.mnt"}
 ROOT_PKGS=${ROOT_PKGS:-"locales less bzip2"}
 BASE_PKGS=${BASE_PKGS:-"vim sudo openssh-server git subversion mercurial s3cmd"}
 EXTRA_PKGS=${EXTRA_PKGS:-""}
-
-[ "x86_64" = "${AMI_ARCH}" ] && DEBIAN_ARCH="amd64"
-[ -z "${DEBIAN_ARCH}" ] && DEBIAN_ARCH="${AMI_ARCH}"
 
 # Return the directory to use for base install
 distro_get_base_directory()
@@ -149,7 +149,7 @@ distro_post_base()
     [ -d "${base}" ] || error "distro_post_base: ${base} is invalid"
     ${SUDO} rm -f "${base}/root/.*history" "${base}/usr/sbin/policy-rc.d" || \
         warn "distro_post_base: error code $? returned while deleting files"
-    return 0s
+    return 0
 }
 
 # Return a filename for the AMI image

@@ -11,7 +11,7 @@ WORKINGDIR=${WORKINGDIR:-"$(pwd)"}
 MOUNTDIR=${MOUNTDIR:-"$(pwd)/centos_${CENTOS_VER}_${AMI_ARCH}.mnt"}
 ROOT_PKGS=${ROOT_PKGS:-"yum-utils"}
 BASE_PKGS=${BASE_PKGS:-"passwd vim-minimal sudo openssh-server man shadow-utils authconfig dhclient postfix which"}
-EXTRA_PKGS=${EXTRA_PKGS:-"git s3cmd"}
+EXTRA_PKGS="${EXTRA_PKGS} git s3cmd"
 
 # Return the directory to use for base install
 distro_get_base_directory()

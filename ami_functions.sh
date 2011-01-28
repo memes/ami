@@ -40,6 +40,7 @@ warn()
 }
 
 # Don't be stupid - too late!
+# $1 = path to test, $2, if present, suppresses check for existence of path
 dont_be_stupid()
 {
     local path=
@@ -54,9 +55,9 @@ dont_be_stupid()
     local canonical=$(readlink -f "${path}")
     [ "/" = "${canonical}" ] && \
         error "dont_be_stupid: not allowed to do anything in root"
-    if [ ! -d "${canonical}" ]; then
-        canonical=$(dirname "${canonical}")
-    fi
+    [ -d "${canonical}" ] || canonical=$(dirname "${canonical}")
+    [ -d "${canonical}" ] || \
+        error "dont_be_stupid: parent directory of ${path} does not exist"
     [ "/" = "${directory}" ] && \
         error "dont_be_stupid: not allowed to do anything in root"
     local base_working_dir=$(readlink -f ${AMI_WORKING_DIR:-${DEFAULT_MINIMAL_WORKING_DIR}} 2>/dev/null)
@@ -361,7 +362,7 @@ mount_img()
     local mnt=
     [ $# -ge 1 ] && mnt="$1"
     [ -z "${mnt}" ] && error "mount_img: \$mnt is unspecified"
-    dont_be_stupid "${mnt}"
+    dont_be_stupid "$(dirname ${mnt})"
     distro_stage "mount_image" "${mnt}"
     custom_stage "mount_image" "${mnt}"
     [ -d "${mnt}" ] || mkdir -p "${mnt}"
@@ -494,9 +495,8 @@ mk_disk_image()
     [ $# -ge 2 ] && img_size="$2"
     [ -z "${img}" ] && \
         error "mk_disk_image: filename for image must be specified"
-    dont_be_stupid "${img}"
     local img_dir=$(dirname "${img}")
-    [ -d "${img_dir}" ] || mkdir -p "${img_dir}"
+    dont_be_stupid "${img_dir}"
     [ -d "${img_dir}" ] || error "mk_disk_image: ${img_dir} does not exist"
     [ -r "${img}" ] && ${SUDO} rm -f "${img}"
     [ -r "${img}" ] && error "mk_disk_image: ${img} already exists"
@@ -557,8 +557,8 @@ mk_fs_image()
     [ $# -ge 1 ] && img="$1"
     [ $# -ge 2 ] && img_size="$2"
     [ -z "${img}" ] && error "mk_fs_image: filename for image must be specified"
-    dont_be_stupid "${img}"
     local img_dir=$(dirname "${img}")
+    dont_be_stupid "${img_dir}"
     [ -d "${img_dir}" ] || mkdir -p "${img_dir}"
     [ -d "${img_dir}" ] || error "mk_fs_image: ${img_dir} does not exist"
     [ -r "${img}" ] && ${SUDO} rm -f "${img}"
@@ -596,7 +596,7 @@ mk_bootable()
     local base=
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "mk_bootable: base directory is unspecified"
-    dont_be_stupid "${mnt}"
+    dont_be_stupid "${base}"
     [ -d "${base}" ] || error "mk_bootable: ${base} directory is invalid"
     ismounted "${base}" || error "mk_bootable: ${base} is not mounted"
     [ -z "${img_dev}" ] && \
@@ -703,8 +703,6 @@ ec2_validate()
         missing="${missing}${missing:+, }\$EC2_ACCESS_KEY"
     [ -z "${EC2_SECRET_KEY}" ] && \
         missing="${missing}${missing:+, }\$EC2_SECRET_KEY"
-#    [ -z "${AMI_BUCKET}" ] && \
-#    missing="${missing}${missing:+, }\$AMI_BUCKET"
     [ -n "${missing}" ] && \
         warn "ec2_validate: the following environment variables are unset: ${missing}"
     which ec2-bundle-image >/dev/null 2>/dev/null || \
@@ -809,10 +807,10 @@ get_ami_img_name()
 get_ami_img_size()
 {
     local img_size=$(custom_stage "get_ami_img_size")
-    [ -n "${img_size}" ] && echo "${img_size}" && return
+    [ ${img_size} -gt 0 2>/dev/null ] && echo ${img_size}
     img_size=$(distro_stage "get_ami_img_size")
-    [ -n "${img_size}" ] && echo "${img_size}" && return
-    return ${DEFAULT_IMG_SIZE}
+    [ ${img_size} -gt 0 2>/dev/null ] && echo ${img_size}
+    echo ${DEFAULT_IMG_SIZE}
 }
 
 # Return a name for the AMI image
@@ -859,10 +857,10 @@ get_kvm_img_name()
 get_kvm_img_size()
 {
     local img_size=$(custom_stage "get_kvm_img_size")
-    [ ${img_size} -ne 0 2>/dev/null ] && return ${img_size}
+    [ ${img_size} -ne 0 2>/dev/null ] && echo ${img_size}
     img_size=$(distro_stage "get_kvm_img_size")
-    [ ${img_size} -ne 0 2>/dev/null ] && return ${img_size}
-    return ${DEFAULT_IMG_SIZE}
+    [ ${img_size} -ne 0 2>/dev/null ] && echo ${img_size}
+    echo ${DEFAULT_IMG_SIZE}
 }
 
 # Prepare the mounted ami image before copying files; just a place-holder
