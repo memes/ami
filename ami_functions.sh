@@ -268,8 +268,8 @@ prebuild_validate()
         error "prebuild_validate: AMI architecture must be specified in \$AMI_ARCH"
     [ "i386" = "${AMI_ARCH}" -o "x86_64" = "${AMI_ARCH}" ] || \
         error "prebuild_validate: AMI architecture must be i386 or x86_64: ${AMI_ARCH} is invalid"
-    [ "x86_64" = "${AMI_ARCH}" -a "x86_64" != "$(arch)" ] && \
-        error "prebuild_validate: cannot build ${AMI_ARCH} install on $(arch) host"
+    [ "x86_64" = "${AMI_ARCH}" -a "x86_64" != "$(uname -m)" ] && \
+        error "prebuild_validate: cannot build ${AMI_ARCH} install on $(uname -m) host"
 }
 
 # Prepare the base before the chroot happens; just a place-holder for distro and
