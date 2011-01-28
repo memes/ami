@@ -118,7 +118,7 @@ enable_dev_files_for()
     local mnt=$(get_mountpoint "${base}")
     [ -z "${mnt}" ] && \
         error "enable_dev_files_for: no mount point found for ${base}"
-    grep -q "${mnt}.*nodev" /proc/mounts >/dev/null 2>/dev/null
+    grep -q " ${mnt} .*nodev" /proc/mounts >/dev/null 2>/dev/null
     if [ $? -eq 0 ]; then
         # Add this mount point to list of modified mount points, if not already
         # accounted for
@@ -126,7 +126,7 @@ enable_dev_files_for()
             nodev_mounts="${nodev_mounts}:${mnt}:"
         ${SUDO} mount -o remount,dev "${mnt}"
     fi
-    grep -q "${mnt}.*nodev" /proc/mounts >/dev/null 2>/dev/null && \
+    grep -q " ${mnt} .*nodev" /proc/mounts >/dev/null 2>/dev/null && \
         error "enable_dev_files_for: ${mnt} is not mounted with dev support"
 }
 
@@ -144,18 +144,18 @@ disable_dev_files_for()
     [ -z "${mnt}" ] && \
         warn "disable_dev_files_for: no mount point found for ${base}" && \
         return
-    grep -q "${mnt}.*nodev" /proc/mounts >/dev/null 2>/dev/null
+    grep -q " ${mnt} .*nodev" /proc/mounts >/dev/null 2>/dev/null
     if [ $? -ne 0 ]; then
     # Check the nodev_mounts to see if the script made this mount point
     # support devices where previously it was disabled and remount only then
         echo "${nodev_mounts}" | grep -q ":${mnt}:" >/dev/null 2>/dev/null
         if [ $? -eq 0 ]; then
-        # This mount was remounted with dev support by this script, allow
+            # This mount was remounted with dev support by this script, allow
             # remount
             local sanitised_mnt=$(echo "${mnt}" | sed -e's/\//\\\//g')
             nodev_mounts=$(echo "${nodev_mounts}" | sed -e"s/:${sanitised_mnt}://g")
             ${SUDO} mount -o remount,nodev "${mnt}"
-            grep -q "${mnt}.*nodev" /proc/mounts >/dev/null 2>/dev/null || \
+            grep -q " ${mnt} .*nodev" /proc/mounts >/dev/null 2>/dev/null || \
                 warn "disable_dev_files_for: ${mnt} is still mounted with dev support"
         fi
     fi
