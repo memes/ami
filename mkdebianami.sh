@@ -13,7 +13,7 @@ MIRROR_URL=${MIRROR_URL:-"http://ftp.debian.org"}
 WORKINGDIR=${WORKINGDIR:-"$(pwd)"}
 MOUNTDIR=${MOUNTDIR:-"$(pwd)/debian_${DEBIAN_VER}_${DEBIAN_ARCH}.mnt"}
 ROOT_PKGS=${ROOT_PKGS:-"locales less bzip2"}
-BASE_PKGS=${BASE_PKGS:-"vim sudo openssh-server git subversion mercurial s3cmd"}
+BASE_PKGS=${BASE_PKGS:-"vim sudo openssh-server git-core subversion mercurial s3cmd"}
 EXTRA_PKGS=${EXTRA_PKGS:-""}
 
 # Return the directory to use for base install
