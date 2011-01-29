@@ -7,7 +7,7 @@
 # Custom functions should be able to use any builder functions
 
 WORKINGDIR=${WORKINGDIR:-"$(pwd)"}
-EXTRA_PKGS="yum"
+EXTRA_PKGS="debootstrap yum"
 
 # Force Debian as the distro
 distro=debian
@@ -37,11 +37,16 @@ custom_post_chroot()
 set -x
 [ -e /home/memes/aws ] && sudo chown -R memes:memes /home/memes/aws
 cat >> /home/memes/.bashrc <<eof
+
 # Include AWS settings, if present
 [ -s /home/memes/aws/aws.rc ] && . /home/memes/aws/aws.rc
+
 # Default to creation of AMI images in specific directory
 export DEFAULT_MINIMAL_WORKING_DIRECTORY=/home/memes/images
 export WORKINGDIR=/home/memes/images
+
+# Default to lenny releases for Debian AMIs
+export DEBIAN_VER=lenny
 eof
 cat > /home/memes/.gitconfig <<eof
 [user]
@@ -91,7 +96,7 @@ custom_get_kvm_img_name()
 }
 
 # Return a file size for the KVM image
-custom_get_ami_img_size()
+custom_get_kvm_img_size()
 {
     # 2Gb should be enough
     echo $((1024 * 1024 * 1024 * 2))
