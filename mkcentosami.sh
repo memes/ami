@@ -10,7 +10,7 @@ MIRROR_URL=${MIRROR_URL:-"http://mirror.centos.org/centos/${CENTOS_VER}"}
 WORKINGDIR=${WORKINGDIR:-"$(pwd)"}
 MOUNTDIR=${MOUNTDIR:-"$(pwd)/centos_${CENTOS_VER}_${AMI_ARCH}.mnt"}
 ROOT_PKGS=${ROOT_PKGS:-"yum-utils"}
-BASE_PKGS=${BASE_PKGS:-"passwd vim-minimal sudo openssh-server man shadow-utils authconfig dhclient postfix which"}
+BASE_PKGS=${BASE_PKGS:-"passwd vim-minimal sudo openssh-server man shadow-utils authconfig dhclient postfix which mailx"}
 EXTRA_PKGS="${EXTRA_PKGS} git s3cmd"
 
 # Return the directory to use for base install
@@ -201,11 +201,8 @@ authconfig --enablemd5 --enableshadow --updateall
 
 # Configure SELinux for permissive mode, if config file is present
 # This allows future use of SElinux, but doesn't enforce current rules
-if [ -s /etc/selinux/config ]; then
-    cp /etc/selinux/config /tmp/selinux-config
-    sed -e'/^SELINUX=/cSELINUX=permissive' /tmp/selinux-config > /etc/selinux/config
-    rm -f /tmp/selinux-config
-fi
+[ -s /etc/selinux/config ] && \
+    sed -i '/^SELINUX=/cSELINUX=permissive' /etc/selinux/config
 
 # Make sure rsyslog, networking and email services are enabled
 chkconfig --level 2345 rsyslog on
@@ -234,6 +231,31 @@ chmod 0700 /home/memes/.ssh
 chmod 0600 /home/memes/.ssh/authorized_keys2
 chown -R memes:memes /home/memes/.ssh
 EOF
+}
+
+# Finalise the chroot installation
+distro_post_chroot()
+{
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && error "distro_prepare_chroot: \$base is unspecified"
+    [ -d "${base}" ] || error "distro_prepare_chroot: ${base} is invalid"
+    if [ -e "${SCRIPT_DIR}/ami_sysv" ]; then
+	${SUDO} cp "${SCRIPT_DIR}/ami_sysv" "${base}/etc/init.d/ami_sysv"
+	${SUDO} chroot "${base}" <<EOF
+# Add a SysV init script to configure the instance at boot
+if [ -s /etc/init.d/ami_sysv ]; then
+    cat > /etc/sysconfig/ami_sysv <<eof
+# Owner of AMI instances is memes@matthewemes.com
+AMI_OWNER=memes@matthewemes.com
+AMI_CC_LIST=
+eof
+    chmod 0755 /etc/init.d/ami_sysv
+    chown root:root /etc/init.d/ami_sysv
+    chkconfig --add ami_sysv
+fi
+EOF
+    fi
 }
 
 # Clean up

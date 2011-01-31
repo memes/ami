@@ -107,6 +107,7 @@ post_chroot "${base_dir}"
 update_fstab "${base_dir}"
 update_sshd "${base_dir}"
 add_memes_keys "${base_dir}"
+update_inittab "${base_dir}"
 
 # Finalise any installation action
 post_base "${base_dir}"

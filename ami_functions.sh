@@ -449,9 +449,7 @@ update_sshd()
     dont_be_stupid "${base}"
     [ -e "${base}/etc/ssh/sshd_config" ] || \
         error "update_sshd: ${base}/etc/ssh/sshd_config does not exist"
-    ${SUDO} cp "${base}/etc/ssh/sshd_config" /tmp/sshd_config
-    ${SUDO} sh -c "sed -e'/^#\?PermitRootLogin/cPermitRootLogin without-password' -e'/^#\?UseDNS/cUseDNS no' /tmp/sshd_config > \"${base}/etc/ssh/sshd_config\""
-    ${SUDO} rm -f /tmp/sshd_config
+    ${SUDO} sed -i -e'/^#\?PermitRootLogin/cPermitRootLogin without-password' -e'/^#\?UseDNS/cUseDNS no' "${base}/etc/ssh/sshd_config"
     ${SUDO} grep -q "^PermitRootLogin without-password" "${base}/etc/ssh/sshd_config" >/dev/null 2>/dev/null || \
         error "update_sshd: ${base}/etc/ssh/sshd_config is not updated"
     distro_stage "update_sshd" "${base}"
@@ -482,6 +480,23 @@ add_memes_keys()
     fi
     distro_stage "add_memes_keys" "${base}"
     custom_stage "add_memes_keys" "${base}"
+}
+
+# Update inittab configuration at $1
+update_inittab()
+{
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && error "update_inittab: \$base is unspecified"
+    dont_be_stupid "${base}"
+    [ -e "${base}/etc/inittab" ] || \
+        error "update_inittab: ${base}/etc/inittab does not exist"
+    ${SUDO} sed -i '/^[2-6]:[2-5]\+:.*getty/ s/^/#/g' "${base}/etc/inittab"
+    local test=$(${SUDO} grep -c '^[1-6].*getty' "${base}/etc/inittab" 2>/dev/null)
+    [ "1" = "${test}" ] || \
+        error "update_inittab: ${base}/etc/inittab is not updated"
+    distro_stage "update_inittab" "${base}"
+    custom_stage "update_inittab" "${base}"
 }
 
 # Make a disk image filename $1 of size $2 and setup block devices to access

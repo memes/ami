@@ -140,6 +140,30 @@ apt-get clean
 EOF
 }
 
+# Finalise the chroot actions
+distro_post_chroot()
+{
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && error "distro_post_chroot: \$base is unspecified"
+    [ -d "${base}" ] || error "distro_post_chroot: ${base} is invalid"
+    if [ -e "${SCRIPT_DIR}/ami_sysv" ]; then
+	${SUDO} cp "${SCRIPT_DIR}/ami_sysv" "${base}/etc/init.d/ami_sysv"
+	${SUDO} chroot "${base}" <<EOF
+# Add a SysV init script to configure the instance at boot
+if [ -s /etc/init.d/ami_sysv ]; then
+    cat > /etc/default/ami_sysv <<eof
+# Owner of AMI instances is memes@matthewemes.com
+AMI_OWNER=memes@matthewemes.com
+AMI_CC_LIST=
+eof
+    chmod 0755 /etc/init.d/ami_sysv
+    chown root:root /etc/init.d/ami_sysv
+    update-rc.d ami_sysv defaults
+fi
+EOF
+    fi
+}
 # Clean up after installation
 distro_post_base()
 {
