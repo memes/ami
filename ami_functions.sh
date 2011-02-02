@@ -332,6 +332,12 @@ post_base()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "post_base: \$base is unspecified"
     dont_be_stupid "${base}"
+    # Add a record of this build
+    ${SUDO} sh -c "cat > ${base}/etc/ami_builder" <<EOF
+AMI instance built on host $(hostname --fqdn)  at $(date '+%H:%M %Z on %m/%d/%y')
+  Invocation parameters: $(cat /proc/$$/cmdline | tr '\0' ' ')
+  Working directory: $(readlink -f /proc/$$/cwd)
+EOF
     distro_stage "post_base" "${base}"
     custom_stage "post_base" "${base}"
 }
@@ -918,7 +924,7 @@ post_kvm_image()
 {
     local base=
     [ $# -ge 1 ] && base="$1"
-    [ -z "${base}" ] && error "post_post_kvm_image: \$base is unspecified"
+    [ -z "${base}" ] && error "post_kvm_image: \$base is unspecified"
     dont_be_stupid "${base}"
     distro_stage "post_kvm_image" "${base}"
     custom_stage "post_kvm_image" "${base}"
@@ -938,4 +944,18 @@ get_img_mount_point()
     local mount_point=$(custom_stage "get_img_mount_point")
     [ -z "${mount_point}" ] && mount_point=$(distro_stage "get_img_mount_point")
     echo "${mount_point}"
+}
+
+# Echo a value if the supplied directory is the 'root' of an EBS volume
+is_ebs_volume()
+{
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && error "is_ebs_volume: \$base is unspecified"
+    local ebs=
+    # If base is not already a directory then this can't be an EBS mount
+    if [ -d "${base}" ]; then
+	dont_be_stupid "${base}"
+    fi
+    echo "${ebs}"
 }
