@@ -86,7 +86,7 @@ custom_get_ami_name()
 # Return a description for the AMI
 custom_get_ami_description()
 {
-    echo "Aaxis CentOS ${AMI_ARCH} image build of $(date '+%H:%M %Z %m/%d/%y')"
+    echo "MEmes AMI Builder ${AMI_ARCH} image build of $(date '+%H:%M %Z %m/%d/%y')"
 }
 
 # Return a filename for the KVM image
