@@ -1,0 +1,73 @@
+#! /bin/sh
+#
+# SysV init script to configure the AMI instance at boot
+#
+### BEGIN INIT INFO
+# Provides:          ami_sysv
+# Required-Start:    $network
+# Required-Stop:     
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Run-time configuration of the AMI at boot
+# Description:       Retrieves meta-data from AWS and updates the AMI
+### END INIT INFO
+
+PATH=/usr/bin:/bin
+DEFAULT_AMI_OWNER="memes@matthewemes.com"
+
+# Try to be distro independent
+[ -s /etc/default/ami_sysv ] && . /etc/default/ami_sysv
+[ -s /etc/sysconfig/ami_sysv ] && . /etc/sysconfig/ami_sysv
+
+owner=${AMI_OWNER:-${DEFAULT_AMI_OWNER}}
+cc_list=${AMI_CC_LIST:-""}
+host=$(hostname)
+
+# Send a message
+send_email()
+{
+    [ -n "${owner}" ] && mail -s "AWS ${host}: $1" ${cc_list:+-c ${cc_list}} ${owner}
+}
+
+# Try to retrieve some information from meta-data associated with this
+# AMI instance and update the run-time configuration. Email the owner,
+# if known, that the instance is changing state.
+start()
+{    
+    send_email "instance has started" <<EOF
+The AWS server named ${host} is available for use. The server may be
+reached via a remote connection to the public IP address ${public_ip}.
+Full details of the instance are shown below.
+
+EOF
+}
+
+# Announce that the instance is stopping
+stop()
+{
+    send_email "instance is stopping" <<EOF
+The AWS server named ${host} is shutting down.
+EOF
+}
+
+case "$1" in
+     start)
+         # Announce start of server
+         start
+         ;;
+     stop)
+         # Announce shutdown of server
+         stop
+	 ;;
+     restart|reload|force-reload)
+         # Reattempt the run-time configuration - LSB requirement
+	 start
+	 ;;
+     *)
+         echo "Usage: $0 {start|stop|restart|reload|force-reload}" >&2
+	 exit 1
+	 ;;
+esac
+
+# Do not impact any other script; always return success
+exit 0
