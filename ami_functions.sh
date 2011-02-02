@@ -208,7 +208,7 @@ prebuild_distro()
 }
 
 # Handle customisation before building starts
-prebuild_customise()
+prebuild_custom()
 {
     local script_dir=
     local custom=
@@ -228,6 +228,29 @@ prebuild_customise()
     [ -z "${custom_file}" -o ! -r "${custom_file}" ] && \
         error "prebuild_custom: cannot find a script for ${custom}"
     . "${custom_file}"
+}
+
+# Handle flavour specifications before building starts
+prebuild_flavour()
+{
+    local script_dir=
+    local flavour=
+    [ $# -ge 1 ] && script_dir="$1"
+    [ $# -ge 2 ] && flavour="$2"
+    [ -z "${script_dir}" ] && \
+        error "prebuild_flavour: \$script_dir is unspecified"
+    [ -d "${script_dir}" ] || \
+        error "prebuild_flavour: ${script_dir} is invalid"
+    [ -z "${flavour}" ] && \
+        error "prebuild_flavour: \$flavour is unspecified"
+    local flavour_file="$(readlink -f ${script_dir}/${flavour} 2>/dev/null)"
+    [ -z "${flavour_file}" -o ! -r "${flavour_file}" ] && \
+        flavour_file="$(readlink -f ${script_dir}/${flavour}.sh 2>/dev/null)"
+    [ -z "${flavour_file}" -o ! -r "${flavour_file}" ] && \
+    flavour_file="$(readlink -f ${script_dir}/mk${flavour}ami.sh 2>/dev/null)"
+    [ -z "${flavour_file}" -o ! -r "${flavour_file}" ] && \
+        error "prebuild_flavour: cannot find a script for ${flavour}"
+    . "${flavour_file}"
 }
 
 # Execute a distro specifc implementation of stage $1, passing all other
@@ -255,9 +278,23 @@ custom_stage()
         error "custom_stage: ${stage}: custom function returned error code $?"
 }
 
+# Execute a flavour specifc implementation of stage $1, passing all other
+# arguments
+flavour_stage()
+{
+    local stage=
+    [ $# -ge 1 ] && stage="$1"
+    [ -z "${stage}" ] && error "flavour_stage: \$stage is unspecified"
+    eval "type flavour_${stage} >/dev/null 2>/dev/null" || return
+    shift
+    eval "flavour_${stage} $@" || \
+        error "flavour_stage: ${stage}: flavour function returned error code $?"
+}
+
 # Validate the environment is ready for use
 prebuild_validate()
 {
+    flavour_stage "prebuild_validate"
     distro_stage "prebuild_validate"
     custom_stage "prebuild_validate"
     [ -z "${SUDO}" ] && \
@@ -281,6 +318,7 @@ prepare_base()
     [ -z "${base}" ] && error "prepare_base: \$base is unspecified"
     dont_be_stupid "${base}"
     enable_dev_files_for "${base}"
+    flavour_stage "prepare_base" "${base}"
     distro_stage "prepare_base" "${base}"
     custom_stage "prepare_base" "${base}"
 }
@@ -303,6 +341,7 @@ prepare_chroot()
     ismounted "${base}/sys" || ${SUDO} mount --bind /sys "${base}/sys"
     ismounted "${base}/sys" || \
         error "prepare_chroot: ${base}/sys is not mounted"
+    flavour_stage "prepare_chroot" "${base}"
     distro_stage "prepare_chroot" "${base}"
     custom_stage "prepare_chroot" "${base}"
 }
@@ -314,6 +353,7 @@ post_chroot()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "post_chroot: \$base is unspecified"
     dont_be_stupid "${base}"
+    flavour_stage "post_chroot" "${base}"
     distro_stage "post_chroot" "${base}"
     custom_stage "post_chroot" "${base}"
     disable_dev_files_for "${base}"
@@ -338,6 +378,7 @@ AMI instance built on host $(hostname --fqdn)  at $(date '+%H:%M %Z on %m/%d/%y'
   Invocation parameters: $(cat /proc/$$/cmdline | tr '\0' ' ')
   Working directory: $(readlink -f /proc/$$/cwd)
 EOF
+    flavour_stage "post_base" "${base}"
     distro_stage "post_base" "${base}"
     custom_stage "post_base" "${base}"
 }
@@ -350,6 +391,7 @@ rm_chroot()
     [ -z "${base}" ] && error "rm_chroot: \$base is unspecified"
     [ -d "${base}" ] || return
     dont_be_stupid "${base}"
+    flavour_stage "rm_chroot" "${base}"
     distro_stage "rm_chroot" "${base}"
     custom_stage "rm_chroot" "${base}"
     disable_dev_files_for "${base}"
@@ -369,6 +411,7 @@ mount_img()
     [ $# -ge 1 ] && mnt="$1"
     [ -z "${mnt}" ] && error "mount_img: \$mnt is unspecified"
     dont_be_stupid "$(dirname ${mnt})"
+    flavour_stage "mount_image" "${mnt}"
     distro_stage "mount_image" "${mnt}"
     custom_stage "mount_image" "${mnt}"
     [ -d "${mnt}" ] || mkdir -p "${mnt}"
@@ -393,6 +436,7 @@ umount_img()
     [ $# -ge 1 ] && mnt="$1"
     [ -z "${mnt}" ] && error "umount_img: \$mnt is unspecified"
     dont_be_stupid "${mnt}"
+    flavour_stage "umount_image" "${mnt}"
     distro_stage "umount_image" "${mnt}"
     custom_stage "umount_image" "${mnt}"
     ismounted "${mnt}" && ${SUDO} umount "${mnt}"
@@ -440,6 +484,7 @@ EOF
 /dev/sdc        /mnt            ext3        defaults,noauto         0        0
 EOF
     fi
+    flavour_stage "update_fstab" "${base}"
     distro_stage "update_fstab" "${base}"
     custom_stage "update_fstab" "${base}"
     [ -s "${base}/etc/fstab" ] || \
@@ -458,6 +503,7 @@ update_sshd()
     ${SUDO} sed -i -e'/^#\?PermitRootLogin/cPermitRootLogin without-password' -e'/^#\?UseDNS/cUseDNS no' "${base}/etc/ssh/sshd_config"
     ${SUDO} grep -q "^PermitRootLogin without-password" "${base}/etc/ssh/sshd_config" >/dev/null 2>/dev/null || \
         error "update_sshd: ${base}/etc/ssh/sshd_config is not updated"
+    flavour_stage "update_sshd" "${base}"
     distro_stage "update_sshd" "${base}"
     custom_stage "update_sshd" "${base}"
 }
@@ -484,6 +530,7 @@ add_memes_keys()
             ${SUDO} sh -c "cat ${key} >> \"${base}/home/memes/.ssh/authorized_keys2\""
         done
     fi
+    flavour_stage "add_memes_keys" "${base}"
     distro_stage "add_memes_keys" "${base}"
     custom_stage "add_memes_keys" "${base}"
 }
@@ -501,6 +548,7 @@ update_inittab()
     local test=$(${SUDO} grep -c '^[1-6].*getty' "${base}/etc/inittab" 2>/dev/null)
     [ "1" = "${test}" ] || \
         error "update_inittab: ${base}/etc/inittab is not updated"
+    flavour_stage "update_inittab" "${base}"
     distro_stage "update_inittab" "${base}"
     custom_stage "update_inittab" "${base}"
 }
@@ -521,6 +569,7 @@ mk_disk_image()
     [ -d "${img_dir}" ] || error "mk_disk_image: ${img_dir} does not exist"
     [ -r "${img}" ] && ${SUDO} rm -f "${img}"
     [ -r "${img}" ] && error "mk_disk_image: ${img} already exists"
+    flavour_stage "mk_disk_image" "${img}" "${img_size}"
     distro_stage "mk_disk_image" "${img}" "${img_size}"
     custom_stage "mk_disk_image" "${img}" "${img_size}"
     [ ${img_size} -ne ${img_size} >/dev/null 2>/dev/null ]
@@ -584,6 +633,7 @@ mk_fs_image()
     [ -d "${img_dir}" ] || error "mk_fs_image: ${img_dir} does not exist"
     [ -r "${img}" ] && ${SUDO} rm -f "${img}"
     [ -r "${img}" ] && error "mk_fs_image: ${img} already exists"
+    flavour_stage "mk_fs_image" "${img}" "${img_size}"
     distro_stage "mk_fs_image" "${img}" "${img_size}"
     custom_stage "mk_fs_image" "${img}" "${img_size}"
     [ ${img_size} -ne ${img_size} >/dev/null 2>/dev/null ]
@@ -671,6 +721,7 @@ EOF
 EOF
         fi
     done
+    flavour_stage "mk_grub_cfg" "${base}"
     distro_stage "mk_grub_cfg" "${base}"
     custom_stage "mk_grub_cfg" "${base}"
 }
@@ -699,6 +750,7 @@ launch_img()
     [ "$i" = "100" ] && error "launch_img: couldn't get an unused mac address"
     [ ${#mac} -ne 17 ] && \
         error "launch_img: couldn't generate a valid mac address"
+    flavour_stage "launch_img" "${img}"
     distro_stage "launch_img" "${img}"
     custom_stage "launch_img" "${img}"
 
@@ -736,6 +788,7 @@ ec2_validate()
         warn "ec2_validate: the following executables are missing: ${exec}"
     [ -n "${missing}" -o -n "${exec}" ] && \
         error "ec2_validate: cannot perform AMI actions, exiting"
+    flavour_stage "ec2_validate"
     distro_stage "ec2_validate"
     custom_stage "ec2_validate"
 }
@@ -755,6 +808,7 @@ bundle_ami()
         block_mappings="${block_mappings},ephemeral0=sda2,swap=sda3"
     [ "x86_64" = "${AMI_ARCH}" ] && \
         block_mappings="${block_mappings},ephemeral0=sdb,ephemeral1=sdc"
+    flavour_stage "bundle_ami" "${img}"
     distro_stage "bundle_ami" "${img}"
     custom_stage "bundle_ami" "${img}"
     ec2-bundle-image -k ${EC2_PRIVATE_KEY} \
@@ -780,6 +834,7 @@ upload_ami()
     [ $# -ge 2 ] && bucket="$2"
     [ $# -ge 3 ] && name="$3"
     [ $# -ge 4 ] && description="$4"
+    flavour_stage "upload_ami" "${ami}" "${bucket}" "${name}" "${description}"
     distro_stage "upload_ami" "${ami}" "${bucket}" "${name}" "${description}"
     custom_stage "upload_ami" "${ami}" "${bucket}" "${name}" "${description}"
     [ -z "${ami}" ] && error "upload_ami: \$ami is unspecified"
@@ -821,6 +876,8 @@ get_ami_img_name()
     [ -n "${img_name}" ] && echo "${img_name}" && return
     img_name=$(distro_stage "get_ami_img_name")
     [ -n "${img_name}" ] && echo "${img_name}" && return
+    img_name=$(flavour_stage "get_ami_img_name")
+    [ -n "${img_name}" ] && echo "${img_name}" && return
     echo "${AMI_ARCH}.ami.img"
 }
 
@@ -828,9 +885,11 @@ get_ami_img_name()
 get_ami_img_size()
 {
     local img_size=$(custom_stage "get_ami_img_size")
-    [ ${img_size} -gt 0 2>/dev/null ] && echo ${img_size}
+    [ ${img_size} -gt 0 2>/dev/null ] && echo ${img_size} && return
     img_size=$(distro_stage "get_ami_img_size")
-    [ ${img_size} -gt 0 2>/dev/null ] && echo ${img_size}
+    [ ${img_size} -gt 0 2>/dev/null ] && echo ${img_size} && return
+    img_size=$(flavour_stage "get_ami_img_size")
+    [ ${img_size} -gt 0 2>/dev/null ] && echo ${img_size} && return
     echo ${DEFAULT_IMG_SIZE}
 }
 
@@ -840,6 +899,8 @@ get_ami_name()
     local name=$(custom_stage "get_ami_name")
     [ -n "${name}" ] && echo "${name}" && return
     name=$(distro_stage "get_ami_name")
+    [ -n "${name}" ] && echo "${name}" && return
+    name=$(flavour_stage "get_ami_name")
     [ -n "${name}" ] && echo "${name}" && return
     echo "Unspecified ${AMI_ARCH}"
 }
@@ -851,6 +912,8 @@ get_ami_description()
     [ -n "${description}" ] && echo "${description}" && return
     description=$(distro_stage "get_ami_description")
     [ -n "${description}" ] && echo "${description}" && return
+    description=$(flavour_stage "get_ami_description")
+    [ -n "${description}" ] && echo "${description}" && return
     echo "Unspecified ${AMI_ARCH} image of $(date '+%H:%M %Z %m/%d/%y')"
 }
 
@@ -860,6 +923,8 @@ get_ami_bucket()
     local bucket=$(custom_stage "get_ami_bucket")
     [ -n "${bucket}" ] && echo "${bucket}" && return
     bucket=$(distro_stage "get_ami_bucket")
+    [ -n "${bucket}" ] && echo "${bucket}" && return
+    bucket=$(flavour_stage "get_ami_bucket")
     [ -n "${bucket}" ] && echo "${bucket}" && return
     echo "${DEFAULT_AMI_BUCKET}"
 }
@@ -871,6 +936,8 @@ get_kvm_img_name()
     [ -n "${img_name}" ] && echo "${img_name}" && return
     img_name=$(distro_stage "get_kvm_img_name")
     [ -n "${img_name}" ] && echo "${img_name}" && return
+    img_name=$(flavour_stage "get_kvm_img_name")
+    [ -n "${img_name}" ] && echo "${img_name}" && return
     echo "${AMI_ARCH}.kvm.img"
 }
 
@@ -878,9 +945,11 @@ get_kvm_img_name()
 get_kvm_img_size()
 {
     local img_size=$(custom_stage "get_kvm_img_size")
-    [ ${img_size} -ne 0 2>/dev/null ] && echo ${img_size}
+    [ ${img_size} -ne 0 2>/dev/null ] && echo ${img_size} && return
     img_size=$(distro_stage "get_kvm_img_size")
-    [ ${img_size} -ne 0 2>/dev/null ] && echo ${img_size}
+    [ ${img_size} -ne 0 2>/dev/null ] && echo ${img_size} && return
+    img_size=$(flavour_stage "get_kvm_img_size")
+    [ ${img_size} -ne 0 2>/dev/null ] && echo ${img_size} && return
     echo ${DEFAULT_IMG_SIZE}
 }
 
@@ -891,6 +960,7 @@ pre_ami_image()
     local base=
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "pre_ami_image: \$base is unspecified"
+    flavour_stage "pre_ami_image" "${base}"
     distro_stage "pre_ami_image" "${base}"
     custom_stage "pre_ami_image" "${base}"
 }
@@ -902,6 +972,7 @@ post_ami_image()
     local base=
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "post_post_ami_image: \$base is unspecified"
+    flavour_stage "post_ami_image" "${base}"
     distro_stage "post_ami_image" "${base}"
     custom_stage "post_ami_image" "${base}"
 }
@@ -914,6 +985,7 @@ pre_kvm_image()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "pre_kvm_image: \$base is unspecified"
     dont_be_stupid "${base}"
+    flavour_stage "pre_kvm_image" "${base}"
     distro_stage "pre_kvm_image" "${base}"
     custom_stage "pre_kvm_image" "${base}"
 }
@@ -926,6 +998,7 @@ post_kvm_image()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "post_kvm_image: \$base is unspecified"
     dont_be_stupid "${base}"
+    flavour_stage "post_kvm_image" "${base}"
     distro_stage "post_kvm_image" "${base}"
     custom_stage "post_kvm_image" "${base}"
 }
@@ -935,6 +1008,7 @@ get_base_directory()
 {
     local base=$(custom_stage "get_base_directory")
     [ -z "${base}" ] && base=$(distro_stage "get_base_directory")
+    [ -z "${base}" ] && base=$(flavour_stage "get_base_directory")
     echo "${base}"
 }
 
@@ -943,19 +1017,46 @@ get_img_mount_point()
 {
     local mount_point=$(custom_stage "get_img_mount_point")
     [ -z "${mount_point}" ] && mount_point=$(distro_stage "get_img_mount_point")
+    [ -z "${mount_point}" ] && \
+	mount_point=$(flavour_stage "get_img_mount_point")
     echo "${mount_point}"
 }
 
-# Echo a value if the supplied directory is the 'root' of an EBS volume
-is_ebs_volume()
+# Handle initialisation functions prior to chrooting and image creation
+# Provides a hook for building options on EBS, etc
+initialise()
+{
+    flavour_stage "initialise" $@
+    distro_stage "initialise" $@
+    custom_stage "initialise" $@
+}
+
+# Handle finalisation functions prior to exiting the scripts
+# Provides a hook for building options on EBS, etc
+finalise()
+{
+    flavour_stage "finalise" $@
+    distro_stage "finalise" $@
+    custom_stage "finalise" $@
+}
+
+# Handle KVM image creation and launch, as determined by flavour script only
+do_kvm()
 {
     local base=
     [ $# -ge 1 ] && base="$1"
-    [ -z "${base}" ] && error "is_ebs_volume: \$base is unspecified"
-    local ebs=
-    # If base is not already a directory then this can't be an EBS mount
-    if [ -d "${base}" ]; then
-	dont_be_stupid "${base}"
-    fi
-    echo "${ebs}"
+    [ -z "${base}" ] && error "do_kvm: \$base is unspecified"
+    # Only allow flavour to perform this step
+    flavour_stage "do_kvm" "${base}"
+}
+
+# Handle AMI image creation and registration, as determined by flavour script
+# only
+do_ami()
+{
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && error "do_ami: \$base is unspecified"
+    # Only allow flavour to perform this step
+    flavour_stage "do_ami" "${base}"
 }

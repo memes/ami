@@ -1,0 +1,79 @@
+# Implements the S3 flavour of AMI creation
+#
+
+# Perform initialisation steps for an S3 AMI
+# - remove if necessary, then create a directory for the initial chroot files
+flavour_initialise()
+{
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && \
+	error "flavour_initialise: \$base is unspecified"
+    rm_chroot "${base_dir}"
+    mkdir -p "${base_dir}" || \
+	error "flavour_initialise: unable to create directory ${base_dir}"
+}
+
+# S3 AMI can be tested in KVM before progressing, so allow the creation of a KVM
+# image and launch for testing
+flavour_do_kvm()
+{
+    [ -n "${KVM_SKIP}" ] && return 0
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && \
+	error "flavour_do_kvm: \$base is unspecified"
+    [ -d "${base}" ] || \
+	error "flavour_do_kvm: ${base} is invalid"
+    # Prepare a KVM instance for testing
+    kvm_img=$(get_kvm_img_name)
+    kvm_img_size=$(get_kvm_img_size)
+    mk_disk_image "${kvm_img}" ${kvm_img_size}
+    mount_point=$(get_img_mount_point)
+    [ -z "${mount_point}" ] && \
+	error "flavour_do_kvm: \$mount_point is unspecified"
+    mount_img "${mount_point}"
+    pre_kvm_image "${mount_point}"
+    ${SUDO} rsync -avP "${base_dir}/" "${mount_point}/" || \
+	error "rsync returned error code $? during copy of files to KVM image"
+    post_kvm_image "${mount_point}"
+    mk_bootable "${mount_point}"
+    umount_img "${mount_point}"
+    
+    [ -z "${KVM_SKIP_LAUNCH}" ] && launch_img "${kvm_img}"
+    return 0
+}
+
+# S3 AMI needs to be bundled, uploaded and registered with AWS to be used
+flavour_do_ami()
+{
+    [ -n "${AMI_SKIP}" ] && return 0
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && \
+	error "flavour_do_ami: \$base is unspecified"
+    [ -d "${base}" ] || \
+	error "flavour_do_ami: ${base} is invalid"
+    # Create an AMI image for upload
+    ami_img=$(get_ami_img_name)
+    ami_img_size=$(get_ami_img_size)
+    mk_fs_image "${ami_img}" ${ami_img_size}
+    mount_point=$(get_img_mount_point)
+    [ -z "${mount_point}" ] && \
+	error "flavour_do_ami: \$mount_point is unspecified"
+    mount_img "${mount_point}"
+    pre_ami_image "${mount_point}"
+    ${SUDO} rsync -avP "${base_dir}/" "${mount_point}/" || \
+	error "rsync returned error code $? during copy of files to AMI image"
+    pre_ami_image "${mount_point}"
+    umount_img "${mount_point}"
+    bundle_ami "${ami_img}"
+    ami_name=$(get_ami_name)
+    ami_description=$(get_ami_description)
+    ami_bucket=$(get_ami_bucket)
+    # Upload and register the AMI
+    [ -z "${AMI_SKIP_UPLOAD}" ] && \
+	upload_ami $(basename "${ami_img}") "${ami_bucket}" "${ami_name}" \
+	"${ami_description}"
+    return 0
+}

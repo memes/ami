@@ -9,6 +9,7 @@ DEFAULT_AMI_BUCKET=${AMI_BUCKET:-"matthewemes.com/ami"}
 DEFAULT_DISTRO=${DEFAULT_DISTRO:-debian}
 DEFAULT_ARCH=${DEFAULT_ARCH:-$(uname -m)}
 DEFAULT_CUSTOM=${DEFAULT_CUSTOM:-""}
+DEFAULT_FLAVOUR=${DEFAULT_FLAVOUR:-"s3"}
 DEFAULT_IMG_SIZE=${DEFAULT_IMG_SIZE:-$((1024 * 1024 * 1024))}
 SUDO=${SUDO:-$(which sudo)}
 
@@ -37,11 +38,13 @@ usage()
     echo "usage: $0 [-d|--distro distro] [-a|--arch arch] [-c|--customise custom]"
     echo "       where options are:-"
     echo "        -d distro, --distro distro  distribution to install"
-    echo "           debian or centos, defaults to debian"
+    echo "           debian or centos, defaults to ${DEFAULT_DISTRO}"
     echo "        -a arch, --arch arch  architecture of AMI"
     echo "           i386 or x86_64, defaults to architecture of current host"
     echo "        -c custom, --customise custom  include customisations in "
     echo "           custom file"
+    echo "        -f flavour, --flavour flavour  build AMI using rules specified"
+    echo "           by flavour file, defaults to ${DEFAULT_FLAVOUR}"
     echo
     exit 1
 }
@@ -68,6 +71,10 @@ getargs()
 		custom="$1"
 		[ -n "${custom}" ] || usage
 		;;
+	    -f|--flavour)
+		shift
+		[ "s3" = "${flavour}" -o "ebs" = "${flavour}" ] || usage
+		;;
 	    *)
 		usage;
 		exit 1;
@@ -79,27 +86,20 @@ getargs()
 # Handle script arguments and set to defaults if necessary
 [ $# -ne 0 ] && getargs $@
 [ -z "${distro}" ] && distro="${DEFAULT_DISTRO}"
+[ -z "${flavour}" ] && flavour="${DEFAULT_FLAVOUR}"
 [ -z "${AMI_ARCH}" ] && AMI_ARCH="${DEFAULT_ARCH}"
 
 # Make sure environment is correct and ROOT_PKGS are specified
-[ -n "${custom}" ] && prebuild_customise "${SCRIPT_DIR}" "${custom}"
+[ -n "${custom}" ] && prebuild_custom "${SCRIPT_DIR}" "${custom}"
 [ -n "${distro}" ] && prebuild_distro "${SCRIPT_DIR}" "${distro}"
+[ -n "${flavour}" ] && prebuild_flavour "${SCRIPT_DIR}" "${flavour}"
 prebuild_validate
 ec2_validate
 
+# Early initialisation of the system
 base_dir=$(get_base_directory)
 [ -z "${base_dir}" ] && error "need a valid base directory to continue"
-is_ebs=$(is_ebs_volume "${base_dir}")
-
-# If the base is not an EBS volume then treat like regular filesystem directory
-if [ -z "${is_ebs}" ]; then
-    # Get a mount point and prepare
-    mount_point=$(get_img_mount_point)
-    [ -z "${mount_point}" ] && \
-	error "need a valid mount point to continue"
-    rm_chroot "${base_dir}"
-    mkdir -p "${base_dir}" || error "unable to create directory ${base_dir}"
-fi
+initialise "${base_dir}"
 
 # Install the software in a chroot
 prepare_base "${base_dir}"
@@ -115,42 +115,14 @@ update_inittab "${base_dir}"
 # Finalise any installation action
 post_base "${base_dir}"
 
-if [ -z "${is_ebs}" ]; then
-    # Prepare a KVM instance for testing
-    kvm_img=$(get_kvm_img_name)
-    kvm_img_size=$(get_kvm_img_size)
-    mk_disk_image "${kvm_img}" ${kvm_img_size}
-    mount_img "${mount_point}"
-    pre_kvm_image "${mount_point}"
-    ${SUDO} rsync -avP "${base_dir}/" "${mount_point}/" || \
-	error "rsync returned error code $? during copy of files to KVM image"
-    post_kvm_image "${mount_point}"
-    mk_bootable "${mount_point}"
-    umount_img "${mount_point}"
+# Perform KVM image creation and launch as flavour determines
+do_kvm "${base_dir}"
 
-    [ -z "${KVM_SKIP_LAUNCH}" ] && launch_img "${kvm_img}"
-fi
-[ -n "${AMI_SKIP}" ] && exit
+# Perform AMI creation and registration, as flavour determines
+do_ami "${base_dir}"
 
-if [ -z "${is_ebs}" ]; then
-    # Create an AMI image
-    ami_img=$(get_ami_img_name)
-    ami_img_size=$(get_ami_img_size)
-    mk_fs_image "${ami_img}" ${ami_img_size}
-    mount_img "${mount_point}"
-    pre_ami_image "${mount_point}"
-    ${SUDO} rsync -avP "${base_dir}/" "${mount_point}/" || \
-	error "rsync returned error code $? during copy of files to AMI image"
-    pre_ami_image "${mount_point}"
-    umount_img "${mount_point}"
-    bundle_ami "${ami_img}"
-    ami_name=$(get_ami_name)
-    ami_description=$(get_ami_description)
-    ami_bucket=$(get_ami_bucket)
-    [ -z "${AMI_SKIP_UPLOAD}" ] && \
-	upload_ami $(basename "${ami_img}") "${ami_bucket}" "${ami_name}" \
-	"${ami_description}"
-else
-    # Complete the EBS setup
-    echo
-fi
+# Do any final actions specified by the scripts before cleanup and exit
+finalise "${base_dir}"
+
+# All done
+exit 0
