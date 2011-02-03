@@ -1,9 +1,6 @@
-#! /bin/sh
-#
 # Simple shell script to create a CentOS image suitable for EC2
 # deployment
 #
-# $Id: $
 
 CENTOS_VER=${CENTOS_VER:-5.5}
 MIRROR_URL=${MIRROR_URL:-"http://mirror.centos.org/centos/${CENTOS_VER}"}

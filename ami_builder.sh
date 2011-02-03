@@ -34,7 +34,6 @@ custom_post_chroot()
     [ -d "${base}" ] || error "custom_post_chroot: ${base} is invalid"
     ${SUDO} rsync -avP --exclude '*~' /home/memes/aws "${base}/home/memes/"
     ${SUDO} chroot "${base}" <<EOF
-set -x
 [ -e /home/memes/aws ] && sudo chown -R memes:memes /home/memes/aws
 cat >> /home/memes/.bashrc <<eof
 

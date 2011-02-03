@@ -1,5 +1,3 @@
-#! /bin/sh
-#
 # Common functions for creating AMI images
 #
 # Environment variables used:-
@@ -865,7 +863,7 @@ upload_ami()
         error "upload_ami: ec2-upload-bundle returned error code $?"
     ec2-register ${bucket}/${ami}.manifest.xml \
         ${name:+"-n ${name}"} \
-        ${description:+"-d \"${description}\""} || \
+        ${description:+"-d ${description}"} || \
         error "upload_ami: ec2-register returned error code $?"
 }
 

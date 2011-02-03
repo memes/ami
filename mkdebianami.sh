@@ -1,9 +1,6 @@
-#! /bin/sh
-#
 # Simple shell script to create a Debian image suitable for EC2
 # deployment
 #
-# $Id: $
 
 [ "x86_64" = "${AMI_ARCH}" ] && DEBIAN_ARCH="amd64"
 [ -z "${DEBIAN_ARCH}" ] && DEBIAN_ARCH="${AMI_ARCH}"
@@ -12,7 +9,7 @@ DEBIAN_VER=${DEBIAN_VER:-stable}
 MIRROR_URL=${MIRROR_URL:-"http://ftp.debian.org"}
 WORKINGDIR=${WORKINGDIR:-"$(pwd)"}
 MOUNTDIR=${MOUNTDIR:-"$(pwd)/debian_${DEBIAN_VER}_${DEBIAN_ARCH}.mnt"}
-ROOT_PKGS=${ROOT_PKGS:-"locales less bzip2"}
+ROOT_PKGS=${ROOT_PKGS:-"locales less bzip2 debconf-utils"}
 BASE_PKGS=${BASE_PKGS:-"vim sudo openssh-server git-core subversion mercurial s3cmd mailx"}
 EXTRA_PKGS=${EXTRA_PKGS:-""}
 
@@ -61,9 +58,37 @@ chmod 0755 /usr/sbin/policy-rc.d
 echo "America/Los_Angeles" > /etc/timezone
 
 LC_ALL=C debconf-set-selections <<eof
-tzdata  tzdata/Zones/America select Los_Angeles
+tzdata tzdata/Zones/Australia select
+tzdata tzdata/Zones/Asia select
+tzdata tzdata/Zones/SystemV select
+tzdata tzdata/Zones/Pacific select
+tzdata tzdata/Zones/Atlantic select
+tzdata tzdata/Zones/US select
+tzdata tzdata/Zones/Etc select UTC
+tzdata tzdata/Zones/Arctic select
+tzdata tzdata/Zones/Antarctica select
+tzdata tzdata/Zones/Europe select
+tzdata tzdata/Zones/Africa select
+tzdata tzdata/Zones/America select Los_Angeles
+tzdata tzdata/Areas select America
+tzdata tzdata/Zones/Indian select
 locales locales/default_environment_locale select en_US.UTF-8
 locales locales/locales_to_be_generated multiselect en_US.UTF-8 UTF-8
+exim4-config exim4/dc_relay_nets string
+exim4-config exim4/mailname string localhost.localdomain
+exim4-config exim4/dc_readhost string
+exim4-config exim4/dc_other_hostnames string localhost.localdomain
+exim4-config exim4/dc_eximconfig_configtype select internet site; mail is sent and received directly using SMTP
+exim4-config exim4/use_split_config boolean false
+exim4-config exim4/dc_localdelivery select mbox format in /var/mail/
+exim4-config exim4/no_config boolean true
+exim4-config exim4/hide_mailname boolean false
+exim4-config exim4/dc_postmaster string real-memes
+exim4-config exim4/dc_local_interfaces string 127.0.0.1
+exim4-config exim4/dc_smarthost string
+exim4-config exim4/dc_relaydomains string
+exim4-config exim4/dc_relaynets string
+exim4-config exim4/dc_minimaldns boolean false
 eof
 LC_ALL=C dpkg-reconfigure --frontend noninteractive --all
 echo "en_US.UTF-8 UTF-8" > /etc/locale.gen

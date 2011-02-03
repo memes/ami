@@ -23,7 +23,7 @@ ROOT_PASSWORD=${ROOT_PASSWORD:-$(dd if=/dev/urandom bs=1 count=16 2>/dev/null | 
 # Source the common functions
 SCRIPT_DIR=${SCRIPT_DIR:-$(dirname $0)}
 [ -r "${SCRIPT_DIR}/ami_functions.sh" ] && . ${SCRIPT_DIR}/ami_functions.sh
-type add_memes_keys >/dev/null 2>/dev/null
+type error >/dev/null 2>/dev/null
 if [ $? -ne 0 ]; then
     echo "$0: Error: required functions in ami_functions are not available" >&2
     exit 1
