@@ -181,8 +181,10 @@ distro_post_chroot()
 # Add a SysV init script to configure the instance at boot
 if [ -s /etc/init.d/ami_sysv ]; then
     cat > /etc/default/ami_sysv <<eof
-# Owner of AMI instances is memes@matthewemes.com
+# Owner of AMI instance
 AMI_OWNER=memes@matthewemes.com
+
+# Others to receive email; must be a comma separated list of emails
 AMI_CC_LIST=
 eof
     chmod 0755 /etc/init.d/ami_sysv
