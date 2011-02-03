@@ -58,6 +58,12 @@ eof
 cd /home/memes/ami && git pull
 [ -d /home/memes/images ] || mkdir -p /home/memes/images
 update-rc.d -f yum-updatesd remove
+
+# Install java
+echo "sun-java6-jdk shared/accepted-sun-dlj-v1-1 boolean true" | debconf-set-selections
+apt-get clean
+apt-get update
+apt-get install -y --no-install-recommends sun-java6-jdk
 EOF
     local uid=$(awk -F: '/^memes/ {print $3}' "${base}/etc/passwd")
     local gid=$(awk -F: '/^memes/ {print $4}' "${base}/etc/passwd")

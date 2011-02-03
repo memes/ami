@@ -52,6 +52,9 @@ distro_prepare_chroot()
 # Recreate required devices
 /sbin/MAKEDEV -d mem null zero ram tty console random urandom
 
+# Make sure contrib and non-free sections are included in apt
+sed -i -e's/ main$/ main contrib non-free/g' /etc/apt/sources.list
+
 # Disable daemon startup during chroot population
 echo "exit 101" > /usr/sbin/policy-rc.d
 chmod 0755 /usr/sbin/policy-rc.d
