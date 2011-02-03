@@ -195,11 +195,13 @@ prebuild_distro()
         error "prebuild_distro: ${script_dir} is invalid"
     [ -z "${distro}" ] && \
         error "prebuild_distro: \$distro is unspecified"
-    local distro_file="$(readlink -f ${script_dir}/${distro} 2>/dev/null)"
+    local distro_file="$(readlink -f ${script_dir}/distro_${distro} 2>/dev/null)"
     [ -z "${distro_file}" -o ! -r "${distro_file}" ] && \
-        distro_file="$(readlink -f ${script_dir}/${distro}.sh 2>/dev/null)"
+        distro_file="$(readlink -f ${script_dir}/distro_${distro}.sh 2>/dev/null)"
     [ -z "${distro_file}" -o ! -r "${distro_file}" ] && \
-        distro_file="$(readlink -f ${script_dir}/mk${distro}ami.sh 2>/dev/null)"
+        distro_file="$(readlink -f ${script_dir}/distro_{distro}.rc 2>/dev/null)"
+    [ -z "${distro_file}" -o ! -r "${distro_file}" ] && \
+        distro_file="$(readlink -f ${script_dir}/distro_{distro}rc 2>/dev/null)"
     [ -z "${distro_file}" -o ! -r "${distro_file}" ] && \
         error "prebuild_distro: cannot find a script for ${distro}"
     . "${distro_file}"
@@ -218,11 +220,13 @@ prebuild_custom()
         error "prebuild_custom: ${script_dir} is invalid"
     [ -z "${custom}" ] && \
         error "prebuild_custom: \$custom is unspecified"
-    local custom_file="$(readlink -f ${script_dir}/${custom} 2>/dev/null)"
+    local custom_file="$(readlink -f ${script_dir}/custom_${custom} 2>/dev/null)"
     [ -z "${custom_file}" -o ! -r "${custom_file}" ] && \
-        custom_file="$(readlink -f ${script_dir}/${custom}.sh 2>/dev/null)"
+        custom_file="$(readlink -f ${script_dir}/custom_${custom}.sh 2>/dev/null)"
     [ -z "${custom_file}" -o ! -r "${custom_file}" ] && \
-    custom_file="$(readlink -f ${script_dir}/mk${custom}ami.sh 2>/dev/null)"
+        custom_file="$(readlink -f ${script_dir}/custom_{custom}.rc 2>/dev/null)"
+    [ -z "${custom_file}" -o ! -r "${custom_file}" ] && \
+        custom_file="$(readlink -f ${script_dir}/custom_{custom}rc 2>/dev/null)"
     [ -z "${custom_file}" -o ! -r "${custom_file}" ] && \
         error "prebuild_custom: cannot find a script for ${custom}"
     . "${custom_file}"
@@ -241,11 +245,13 @@ prebuild_flavour()
         error "prebuild_flavour: ${script_dir} is invalid"
     [ -z "${flavour}" ] && \
         error "prebuild_flavour: \$flavour is unspecified"
-    local flavour_file="$(readlink -f ${script_dir}/${flavour} 2>/dev/null)"
+    local flavour_file="$(readlink -f ${script_dir}/flavour_${flavour} 2>/dev/null)"
     [ -z "${flavour_file}" -o ! -r "${flavour_file}" ] && \
-        flavour_file="$(readlink -f ${script_dir}/${flavour}.sh 2>/dev/null)"
+        flavour_file="$(readlink -f ${script_dir}/flavour_${flavour}.sh 2>/dev/null)"
     [ -z "${flavour_file}" -o ! -r "${flavour_file}" ] && \
-    flavour_file="$(readlink -f ${script_dir}/mk${flavour}ami.sh 2>/dev/null)"
+        flavour_file="$(readlink -f ${script_dir}/flavour_{flavour}.rc 2>/dev/null)"
+    [ -z "${flavour_file}" -o ! -r "${flavour_file}" ] && \
+        flavour_file="$(readlink -f ${script_dir}/flavour_{flavour}rc 2>/dev/null)"
     [ -z "${flavour_file}" -o ! -r "${flavour_file}" ] && \
         error "prebuild_flavour: cannot find a script for ${flavour}"
     . "${flavour_file}"

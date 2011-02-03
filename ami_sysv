@@ -12,21 +12,134 @@
 # Description:       Retrieves meta-data from AWS and updates the AMI
 ### END INIT INFO
 
-PATH=/usr/bin:/bin
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
 DEFAULT_AMI_OWNER="memes@matthewemes.com"
 
-# Try to be distro independent
-[ -s /etc/default/ami_sysv ] && . /etc/default/ami_sysv
-[ -s /etc/sysconfig/ami_sysv ] && . /etc/sysconfig/ami_sysv
+# Retrieve meta-data variable and echo to stdout
+get_meta_data()
+{
+    local meta=
+    [ $# -ge 1 ] && meta="$1"
+    [ -z "${meta}" ] && echo && return
 
-owner=${AMI_OWNER:-${DEFAULT_AMI_OWNER}}
-cc_list=${AMI_CC_LIST:-""}
-host=$(hostname)
+    # Try to get the value from AWS
+    #wget -q -O- http://169.254.169.254/latest/meta-data/${meta}
+    case "${meta}" in
+	user-data)
+	    cat <<EOF
+hostname=ganymede.saturn.matthewemes.com
+
+
+owner=root@ganymede.saturn.matthewemes.com
+foo=bar
+
+EOF
+	    ;;
+	public-hostname)
+	    echo -n "abc.def.public"
+	    ;;
+	public-ipv4)
+	    echo -n "10.0.0.1"
+	    ;;
+	instance-id)
+	    echo -n "a-bbbbbb"
+	    ;;
+	security-groups)
+	    echo -n "dasf adsfsadf"
+	    ;;
+	local-hostname)
+	    echo -n "localname"
+	    ;;
+	local-ipv4)
+	    echo -n "127.0.0.1"
+	    ;;
+	*)
+	    ;;
+    esac
+    return 0
+}
+
+# Update the system notion of hostname
+update_hostname()
+{
+    local new_hostname=
+    [ $# -ge 1 ] && new_hostname="$1"
+    [ -z "${new_hostname}" ] && \
+	new_hostname=$(get_meta_data local-hostname)
+    [ -z "${new_hostname}" ] && return 0
+    [ "${new_hostname}" = "$(hostname -f)" ] && return 0
+    short_hostname=$(echo ${new_hostname} | cut -d. -f1)
+    
+    # Update the permanent hostname on this instance
+    [ -e /etc/hostname ] && echo "${short_hostname}" > /etc/hostname
+    [ -e /etc/sysconfig/network ] && \
+	sed -i -e"/^HOSTNAME/cHOSTNAME=${new_hostname}" /etc/sysconfig/network
+    sed -i -e"/^127\.0\.0\.1/c127.0.0.1 ${new_hostname} ${short_hostname} localhost localhost.localdomain" /etc/hosts
+    hostname ${short_hostname}
+
+    # Handle email configuration on the host to reflect new hostname
+    if [ -e /etc/debian_version ]; then
+	# Debian: reconfigure exim4
+	debconf-set-selections <<EOF
+exim4-config exim4/mailname string ${new_hostname}
+exim4-config exim4/dc_other_hostnames string ${new_hostname}
+EOF
+	dpkg-reconfigure -fnoninteractive exim4-config
+    fi
+    if [ -e /etc/redhat-release ]; then
+	# CentOS: reconfigure postfix	
+	postconf -e 'inet_interfaces = 127.0.0.1'
+	service postfix restart
+    fi
+}
+
+# Update the owner of the system
+update_owner()
+{
+    local owner=
+    [ $# -ge 1 ] && owner="$1"
+    [ -z "${owner}" ] && owner=${AMI_OWNER:-${DEFAULT_AMI_OWNER}}
+    local rcfile=
+    [ -s /etc/debian_version ] && rcfile=/etc/default/ami_sysv
+    [ -s /etc/redhat-release ] && rcfile=/etc/sysconfig/ami_sysv
+    [ -s ${rcfile} ] || touch ${rcfile}
+    sed -i -e"/^#*AMI_OWNER=/cAMI_OWNER=${owner}" ${rcfile}
+    grep -q "^AMI_OWNER=${owner}" ${rcfile} >/dev/null 2>/dev/null || \
+	echo "AMI_OWNER=${owner}" >> ${rcfile}
+}
+
+# Process user-supplied data; expect to see a line per key=value pair
+process_user_data()
+{
+    local key=
+    local value=
+    get_meta_data user-data | while read data
+    do
+	# Force lowercase and split at the first =
+	key=$(echo "${data}" | tr [A-Z] [a-z] | cut -f1 -d=)
+	value=$(echo "${data}" | tr [A-Z] [a-z] | cut -f2- -d=)
+	case "${key}" in
+	    hostname)
+		update_hostname "${value}"
+		;;
+	    owner)
+		update_owner "${value}"
+		;;
+	    *)
+		;;
+	esac
+    done
+}
 
 # Send a message
 send_email()
 {
-    [ -n "${owner}" ] && mail -s "AWS ${host}: $1" ${cc_list:+-c ${cc_list}} ${owner}
+    # Try to be distro independent
+    [ -s /etc/default/ami_sysv ] && . /etc/default/ami_sysv
+    [ -s /etc/sysconfig/ami_sysv ] && . /etc/sysconfig/ami_sysv
+    local owner=${AMI_OWNER:-${DEFAULT_AMI_OWNER}}
+    [ -n "${ownerXXX}" ] && \
+	mail -s "AWS $(hostname -s): $1" ${AMI_CC_LIST:+-c ${AMI_CC_LIST}} ${owner}
 }
 
 # Try to retrieve some information from meta-data associated with this
@@ -34,11 +147,14 @@ send_email()
 # if known, that the instance is changing state.
 start()
 {    
+    process_user_data
     send_email "instance has started" <<EOF
-The AWS server named ${host} is available for use. The server may be
-reached via a remote connection to the public IP address ${public_ip}.
-Full details of the instance are shown below.
+The AWS server named $(hostname -f) has been launched and is available for use. The server may be reached via a remote connection to $(get_meta_data public-hostname) [$(get_meta_data public-ipv4)].
 
+Full details of the instance are shown below.
+  instance id: $(get_meta_data instance-id)
+  security groups: $(get_meta_data security-groups)
+  AWS local network: $(get_meta_data local-hostname) [$(get_meta_data local-ipv4)]
 EOF
 }
 
@@ -49,6 +165,11 @@ stop()
 The AWS server named ${host} is shutting down.
 EOF
 }
+
+if [ "$(id -u)" != "0" ]; then
+    echo "$0: you must be root to execute this script"
+    exit 1
+fi
 
 case "$1" in
      start)
