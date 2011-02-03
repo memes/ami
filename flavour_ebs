@@ -1,3 +1,4 @@
+# -*- mode: sh; -*-
 # Implements the EBS flavour of AMI creation
 #
 

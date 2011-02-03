@@ -1,3 +1,4 @@
+# -*- mode: sh; -*-
 # Bootstrap an AMI builder instance customisation file for MEmes AMI builder
 #
 # This file is sourced before building begins and can modify

@@ -1,3 +1,4 @@
+# -*- mode: sh; -*-
 # Implements the S3 flavour of AMI creation
 #
 

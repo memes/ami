@@ -1,3 +1,4 @@
+# -*- mode: sh; -*-
 # Simple shell script to create a Debian image suitable for EC2
 # deployment
 #
