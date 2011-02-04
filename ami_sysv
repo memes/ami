@@ -23,39 +23,7 @@ get_meta_data()
     [ -z "${meta}" ] && echo && return
 
     # Try to get the value from AWS
-    #wget -q -O- http://169.254.169.254/latest/meta-data/${meta}
-    case "${meta}" in
-	user-data)
-	    cat <<EOF
-hostname=ganymede.saturn.matthewemes.com
-
-
-owner=root@ganymede.saturn.matthewemes.com
-foo=bar
-
-EOF
-	    ;;
-	public-hostname)
-	    echo -n "abc.def.public"
-	    ;;
-	public-ipv4)
-	    echo -n "10.0.0.1"
-	    ;;
-	instance-id)
-	    echo -n "a-bbbbbb"
-	    ;;
-	security-groups)
-	    echo -n "dasf adsfsadf"
-	    ;;
-	local-hostname)
-	    echo -n "localname"
-	    ;;
-	local-ipv4)
-	    echo -n "127.0.0.1"
-	    ;;
-	*)
-	    ;;
-    esac
+    wget -q -O- http://169.254.169.254/latest/meta-data/${meta} 2>/dev/null
     return 0
 }
 
@@ -108,6 +76,55 @@ update_owner()
 	echo "AMI_OWNER=${owner}" >> ${rcfile}
 }
 
+# Add the public key associated with this instance to the users
+update_public_key()
+{
+    [ -s /etc/default/ami_sysv ] && . /etc/default/ami_sysv
+    [ -s /etc/sysconfig/ami_sysv ] && . /etc/sysconfig/ami_sysv
+    local key="$(get_meta_data public-keys/0/openssh-key)"
+    [ -z "${key}" ] && return 0
+    local keysum=$(echo ${key} | sha1sum | cut -f1 -d' ')
+    local keyfile=
+    local uid=
+    local gid=
+    local existing_key=
+    local existing_keysum=
+    local found_key=
+    for user in root ${AMI_UPDATE_KEYS}
+    do
+	found_key=
+	uid=$(id -u ${user} 2>/dev/null)
+	[ -z "${uid}" ] && continue
+	gid=$(id -g ${user} 2>/dev/null)
+	keyfile=$(readlink -f `grep "^${user}" /etc/passwd | cut -d: -f6`)/.ssh/authorized_keys2
+	# If authorized_keys2 does not exist, create it with the correct
+	# permissions
+	if [ -d "$(dirname "${keyfile}")" ]; then
+	    # Add the key to the existing file
+	    if [ -s "${keyfile}" ]; then
+		# Try to see if there is already a matching key
+		while read existing_key
+		do
+		    [ -z "${existing_key}" ] && continue
+		    existing_keysum=$(echo ${existing_key} | sha1sum | cut -f1 -d' ')
+		    [ "${existing_keysum}" = "${keysum}" ] && found_key=1 && \
+			break
+		done < "${keyfile}"
+		[ -z "${found_key}" ] && \
+		    echo "${key}" >> "${keyfile}"
+	    else
+		echo "${key}" >> "${keyfile}"
+	    fi
+	else
+	    mkdir -p "$(dirname "${keyfile}")"
+	    echo "${key}" > ${keyfile}
+	    chmod 0700 "$(dirname "${keyfile}")"
+	    chmod 0600 "${keyfile}"
+	    chown -R ${uid}${gid:+:${gid}} "$(dirname "${keyfile}")"
+	fi
+    done
+}
+
 # Process user-supplied data; expect to see a line per key=value pair
 process_user_data()
 {
@@ -138,7 +155,7 @@ send_email()
     [ -s /etc/default/ami_sysv ] && . /etc/default/ami_sysv
     [ -s /etc/sysconfig/ami_sysv ] && . /etc/sysconfig/ami_sysv
     local owner=${AMI_OWNER:-${DEFAULT_AMI_OWNER}}
-    [ -n "${ownerXXX}" ] && \
+    [ -n "${owner}" ] && \
 	mail -s "AWS $(hostname -s): $1" ${AMI_CC_LIST:+-c ${AMI_CC_LIST}} ${owner}
 }
 
@@ -148,6 +165,7 @@ send_email()
 start()
 {    
     process_user_data
+    update_public_key
     send_email "instance has started" <<EOF
 The AWS server named $(hostname -f) has been launched and is available for use. The server may be reached via a remote connection to $(get_meta_data public-hostname) [$(get_meta_data public-ipv4)].
 
