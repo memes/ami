@@ -41,9 +41,10 @@ cat >> /home/memes/.bashrc <<eof
 # Include AWS settings, if present
 [ -s /home/memes/aws/aws.rc ] && . /home/memes/aws/aws.rc
 
-# Default to creation of AMI images in specific directory
+# Default to creation of AMI images in specific directory via EBS
 export DEFAULT_MINIMAL_WORKING_DIRECTORY=/home/memes/images
 export WORKINGDIR=/home/memes/images
+export DEFAULT_FLAVOUR=ebs
 
 # Default to lenny releases for Debian AMIs
 export DEBIAN_VER=lenny
