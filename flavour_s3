@@ -69,9 +69,9 @@ flavour_do_ami()
     pre_ami_image "${mount_point}"
     umount_img "${mount_point}"
     bundle_ami "${ami_img}"
-    ami_name=$(get_ami_name)
-    ami_description=$(get_ami_description)
-    ami_bucket=$(get_ami_bucket)
+    ami_name="$(get_ami_name)"
+    ami_description="$(get_ami_description)"
+    ami_bucket="$(get_ami_bucket)"
     # Upload and register the AMI
     [ -z "${AMI_SKIP_UPLOAD}" ] && \
 	upload_ami $(basename "${ami_img}") "${ami_bucket}" "${ami_name}" \
