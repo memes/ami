@@ -11,7 +11,7 @@
 # Short-Description: Run-time configuration of the AMI at boot
 # Description:       Retrieves meta-data from AWS and updates the AMI
 ### END INIT INFO
-set -x
+
 PATH=/usr/bin:/bin:/usr/sbin:/sbin
 DEFAULT_AMI_OWNER="memes@matthewemes.com"
 
