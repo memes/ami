@@ -58,11 +58,10 @@ update_hostname()
     # Handle email configuration on the host to reflect new hostname
     if [ -e /etc/debian_version ]; then
 	# Debian: reconfigure exim4
-	debconf-set-selections <<EOF
-exim4-config exim4/mailname string ${new_hostname}
-exim4-config exim4/dc_other_hostnames string ${new_hostname}
-EOF
-	dpkg-reconfigure -fnoninteractive exim4-config
+	echo -n "${new_hostname}" > /etc/mailname
+	sed -i -e "/^dc_other_hostnames/cdc_other_hostnames='${new_hostname}'" /etc/exim4/update-exim4.conf.conf
+	update-exim4.conf
+	service exim4 restart
     fi
     if [ -e /etc/redhat-release ]; then
 	# CentOS: reconfigure postfix	
