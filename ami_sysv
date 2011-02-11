@@ -33,6 +33,7 @@ get_user_data()
 {
     # Try to get the value from AWS
     wget -q --timeout=60 -O- http://169.254.169.254/latest/user-data 2>/dev/null
+    echo
     return 0
 }
 
