@@ -28,6 +28,14 @@ get_meta_data()
     return 0
 }
 
+# Retrieve user-data and echo to stdout
+get_user_data()
+{
+    # Try to get the value from AWS
+    wget -q --timeout=60 -O- http://169.254.169.254/latest/user-data 2>/dev/null
+    return 0
+}
+
 # Update the system notion of hostname
 update_hostname()
 {
@@ -131,7 +139,7 @@ process_user_data()
 {
     local key=
     local value=
-    get_meta_data user-data | while read data
+    get_user_data | while read data
     do
 	# Force lowercase and split at the first =
 	key=$(echo "${data}" | tr [A-Z] [a-z] | cut -f1 -d=)
