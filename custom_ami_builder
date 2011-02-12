@@ -46,8 +46,8 @@ export DEFAULT_MINIMAL_WORKING_DIRECTORY=/home/memes/images
 export WORKINGDIR=/home/memes/images
 export DEFAULT_FLAVOUR=ebs
 
-# Default to lenny releases for Debian AMIs
-export DEBIAN_VER=lenny
+# Default to squeeze releases for Debian AMIs
+export DEBIAN_VER=squeeze
 eof
 cat > /home/memes/.gitconfig <<eof
 [user]
