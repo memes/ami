@@ -168,7 +168,6 @@ eof
 # Clean up apt database
 apt-get clean
 EOF
-/bin/bash
 }
 
 # Finalise the chroot actions
