@@ -35,7 +35,7 @@ trap cleanup 0 1 2 3 15
 # Print usage information
 usage()
 {
-    echo "usage: $0 [-d|--distro distro] [-a|--arch arch] [-c|--customise custom]"
+    echo "usage: $0 [-d|--distro distro] [-a|--arch arch] [-c|--customise custom] [-f|--flavour flavour]"
     echo "       where options are:-"
     echo "        -d distro, --distro distro  distribution to install"
     echo "           debian or centos, defaults to ${DEFAULT_DISTRO}"
@@ -73,6 +73,7 @@ getargs()
 		;;
 	    -f|--flavour)
 		shift
+		flavour="$1"
 		[ "s3" = "${flavour}" -o "ebs" = "${flavour}" ] || usage
 		;;
 	    *)
