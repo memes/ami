@@ -238,7 +238,8 @@ distro_get_kvm_img_name()
     echo "${WORKINGDIR}/debian_${DEBIAN_VER}_${DEBIAN_ARCH}.kvm.img"
 }
 
-# Prepare the kvm filesystem image by installing a kernel
+# Prepare the kvm filesystem image by installing a kernel and removing SysV
+# startup of ami_sysv script
 distro_post_kvm_image()
 {
     local base=
@@ -263,6 +264,8 @@ link_in_boot = no
 eof
 apt-get install -y linux-image-${kernel_flavour}
 rm -f /etc/udev/rules.d/70-persistent-net.rules
+update-rc.d -f ami_sysv remove
+
 EOF
     ${SUDO} umount "${base}/sys" || \
         error "distro_post_kvm_image: unable to umount ${base}/sys"

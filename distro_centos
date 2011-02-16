@@ -316,8 +316,11 @@ distro_post_kvm_image()
         error "distro_post_kvm_image: unable to rebind /proc to ${base}/proc"
     ${SUDO} mount --bind /sys "${base}/sys" || \
         error "distro_post_kvm_image: unable to rebind /sys to ${base}/sys"
-    # Install a kernel for testing
-    ${SUDO} chroot "${base}" yum -y ${EXCLUDE} install kernel
+    # Install a kernel for testing and disable ami_sysv
+    ${SUDO} chroot "${base}" <<EOF
+yum -y ${EXCLUDE} install kernel
+chkconfig --del ami_sysv
+EOF
     ${SUDO} umount "${base}/sys" || \
         error "distro_post_kvm_image: unable to umount ${base}/sys"
     ${SUDO} umount "${base}/proc" || \
