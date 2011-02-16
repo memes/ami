@@ -466,11 +466,17 @@ update_fstab()
         error "update_fstab: ${base}/etc does not exist"
     ${SUDO} sh -c "cat > \"${base}/etc/fstab\"" <<EOF
 LABEL=root      /               ext3        defaults,noatime        0        1
-none            /dev/pts        devpts      defaults                0        0
-none            /dev/shm        tmpfs       gid=5,mode=620          0        0
+none            /dev/pts        devpts      defaults,gid=5,mode=620 0        0
 none            /proc           proc        defaults                0        0
 none            /sys            sysfs       defaults                0        0
 EOF
+
+    # Debian automounts /dev/shm during boot, but add to fstab for CentOS
+    if [ "centos" = "${distro}" ]; then
+        ${SUDO} sh -c "cat >> \"${base}/etc/fstab\"" <<EOF
+none            /dev/shm        tmpfs       defaults                0        0
+EOF
+    fi
 
     if [ "i386" = "${AMI_ARCH}" ]; then
         ${SUDO} sh -c "cat >> \"${base}/etc/fstab\"" <<EOF
