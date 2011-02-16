@@ -36,7 +36,7 @@ custom_post_chroot()
     ${SUDO} rsync -avP --exclude '*~' /home/memes/aws "${base}/home/memes/"
     ${SUDO} chroot "${base}" <<EOF
 [ -e /home/memes/aws ] && sudo chown -R memes:memes /home/memes/aws
-cat >> /home/memes/.bashrc <<eof
+cat >> /home/memes/.profile <<eof
 
 # Include AWS settings, if present
 [ -s /home/memes/aws/aws.rc ] && . /home/memes/aws/aws.rc
@@ -45,6 +45,9 @@ cat >> /home/memes/.bashrc <<eof
 export DEFAULT_MINIMAL_WORKING_DIRECTORY=/home/memes/images
 export WORKINGDIR=/home/memes/images
 export DEFAULT_FLAVOUR=ebs
+
+# Do not attempt to perform KVM testing
+export KVM_SKIP=1
 
 # Default to squeeze releases for Debian AMIs
 export DEBIAN_VER=squeeze
@@ -81,7 +84,7 @@ custom_get_ami_img_name()
 custom_get_ami_img_size()
 {
     # 2Gb should be enough
-    echo $((1024 * 1024 * 1024 * 2))
+    echo $((1024 * 1024 * 1024 * 10))
 }
 
 # Return a name for the AMI
@@ -106,5 +109,5 @@ custom_get_kvm_img_name()
 custom_get_kvm_img_size()
 {
     # 2Gb should be enough
-    echo $((1024 * 1024 * 1024 * 2))
+    echo $((1024 * 1024 * 1024 * 10))
 }
