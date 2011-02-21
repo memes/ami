@@ -55,6 +55,25 @@ update_hostname()
     sed -i -e"/^127\.0\.0\.1/c127.0.0.1 ${new_hostname} ${short_hostname} localhost localhost.localdomain" /etc/hosts
     hostname ${short_hostname}
 
+    # Update SSH keys for the new host
+    rm -f /etc/ssh/ssh_host_key /etc/ssh/ssh_host_key.pub \
+	/etc/ssh/ssh_host_dsa_key /etc/ssh/ssh_host_dsa_key.pub \
+	/etc/ssh/ssh_host_rsa_key /etc/ssh/ssh_host_rsa_key.pub
+    /usr/bin/ssh-keygen -q -t rsa1 -C'' -N'' -f /etc/ssh/ssh_host_key >/dev/null 2>/dev/null
+    /usr/bin/ssh-keygen -q -t dsa -C'' -N'' -f /etc/ssh/ssh_host_dsa_key >/dev/null 2>/dev/null
+    /usr/bin/ssh-keygen -q -t rsa -C'' -N'' -f /etc/ssh/ssh_host_rsa_key >/dev/null 2>/dev/null
+    chmod 600 /etc/ssh/ssh_host_key /etc/ssh/ssh_host_dsa_key \
+	/etc/ssh/ssh_host_rsa_key
+    chmod 644 /etc/ssh/ssh_host_key.pub /etc/ssh/ssh_host_dsa_key.pub \
+	/etc/ssh/ssh_host_rsa_key.pub
+    [ -x /sbin/restorecon ] && \
+	/sbin/restorecon /etc/ssh/ssh_host_key.pub \
+	/etc/ssh/ssh_host_key_rsa.pub \
+	/etc/ssh/ssh_host_key_dsa.pub
+
+    [ -x /etc/init.d/ssh ] && /etc/init.d/ssh restart
+    [ -x /etc/init.d/sshd ] && /etc/init.d/sshd restart
+
     # Handle email configuration on the host to reflect new hostname
     if [ -e /etc/debian_version ]; then
 	# Debian: reconfigure exim4
