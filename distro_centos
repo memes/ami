@@ -271,7 +271,7 @@ distro_post_base()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "distro_post_base: \$base is unspecified"
     [ -d "${base}" ] || error "distro_post_base: ${base} is invalid"
-    ${SUDO} rm -f "${base}/root/.*history"
+    ${SUDO} rm -f "${base}/root/.bash_history"
     [ -e "${base}/etc/rpm/platform" ] && \
         grep -q memes "${base}/etc/rpm/platform" >/dev/null 2>/dev/null && \
         ${SUDO} rm -f "${base}/etc/rpm/platform"

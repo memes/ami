@@ -209,7 +209,9 @@ distro_post_base()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "distro_post_base: \$base is unspecified"
     [ -d "${base}" ] || error "distro_post_base: ${base} is invalid"
-    ${SUDO} rm -f "${base}/root/.*history" "${base}/usr/sbin/policy-rc.d" || \
+    ${SUDO} rm -f "${base}/root/.bash_history" "${base}/usr/sbin/policy-rc.d" \
+	"${base}/etc/udev/rules.d/70-persistent-net.rules" \
+	"${base}/etc/udev/rules.d/70-persistent-cd.rules" || \
         warn "distro_post_base: error code $? returned while deleting files"
     return 0
 }
@@ -263,10 +265,9 @@ do_initrd = yes
 link_in_boot = no
 eof
 apt-get install -y linux-image-${kernel_flavour}
-rm -f /etc/udev/rules.d/70-persistent-net.rules
 update-rc.d -f ami_sysv remove
-
 EOF
+
     ${SUDO} umount "${base}/sys" || \
         error "distro_post_kvm_image: unable to umount ${base}/sys"
     ${SUDO} umount "${base}/proc" || \
