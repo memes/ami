@@ -591,7 +591,7 @@ mk_disk_image()
         warn "mk_disk_image: image size is unspecified, using default value [${DEFAULT_IMG_SIZE}]"
     [ -z "${img_size}" ] && img_size=${DEFAULT_IMG_SIZE}
     
-    dd if=/dev/zero of="${img}" bs=512 count=1 seek=$(($img_size/512 - 1))
+    dd if=/dev/zero of="${img}" bs=512 count=1 seek=$(($img_size/512 - 1)) >/dev/null 2>/dev/null
     [ -s "${img}" ] || error "mk_disk_image: couldn't create file ${img}"
     local cylinders=$((${img_size} / (512 * ${DEFAULT_IMG_HEADS} * ${DEFAULT_IMG_SECTORS})))
     # Use a smaller block count to avoid filesystem/physical size issues
@@ -655,7 +655,7 @@ mk_fs_image()
         warn "mk_fs_image: image size is unspecified, using default value [${DEFAULT_IMG_SIZE}]"
     [ -z "${img_size}" ] && img_size=${DEFAULT_IMG_SIZE}
     
-    dd if=/dev/zero of="${img}" bs=512 count=1 seek=$(($img_size/512 - 1))
+    dd if=/dev/zero of="${img}" bs=512 count=1 seek=$(($img_size/512 - 1)) >/dev/null 2>/dev/null
     [ -s "${img}" ] || error "mk_fs_image: couldn't create file ${img}"
     ${SUDO} losetup -f "${img}" || \
         error "mk_fs_image: losetup returned error code $? for ${img}"
@@ -751,7 +751,7 @@ launch_img()
     
     # Get a mac address to use
     for i in $(seq 100); do
-        mac="54:52:00:00:00:$(dd if=/dev/urandom bs=1 count=1 | od -t x1 | cut -d' ' -f2 | head -n 1)"
+        mac="54:52:00:00:00:$(dd if=/dev/urandom bs=1 count=1 2>/dev/null | od -t x1 | cut -d' ' -f2 | head -n 1)"
         [ ${#mac} -ne 17 ] && continue;
         # Not reliable over vde2, so skip and hope there are no collisions
         #    arping -qc 3 ${mac} >/dev/null 2>/dev/null || break

@@ -35,7 +35,7 @@ flavour_do_kvm()
 	error "flavour_do_kvm: \$mount_point is unspecified"
     mount_img "${mount_point}"
     pre_kvm_image "${mount_point}"
-    ${SUDO} rsync -avP "${base_dir}/" "${mount_point}/" || \
+    ${SUDO} rsync -qa "${base_dir}/" "${mount_point}/" || \
 	error "rsync returned error code $? during copy of files to KVM image"
     post_kvm_image "${mount_point}"
     mk_bootable "${mount_point}"
@@ -64,7 +64,7 @@ flavour_do_ami()
 	error "flavour_do_ami: \$mount_point is unspecified"
     mount_img "${mount_point}"
     pre_ami_image "${mount_point}"
-    ${SUDO} rsync -avP "${base_dir}/" "${mount_point}/" || \
+    ${SUDO} rsync -qa "${base_dir}/" "${mount_point}/" || \
 	error "rsync returned error code $? during copy of files to AMI image"
     pre_ami_image "${mount_point}"
     umount_img "${mount_point}"
