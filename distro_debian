@@ -6,7 +6,7 @@
 [ "x86_64" = "${AMI_ARCH}" ] && DEBIAN_ARCH="amd64"
 [ -z "${DEBIAN_ARCH}" ] && DEBIAN_ARCH="${AMI_ARCH}"
 
-DEBIAN_VER=${DEBIAN_VER:-stable}
+DEBIAN_VER=${DEBIAN_VER:-lenny}
 MIRROR_URL=${MIRROR_URL:-"http://ftp.debian.org"}
 WORKINGDIR=${WORKINGDIR:-"$(pwd)"}
 MOUNTDIR=${MOUNTDIR:-"$(pwd)/debian_${DEBIAN_VER}_${DEBIAN_ARCH}.mnt"}
