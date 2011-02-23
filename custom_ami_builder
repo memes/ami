@@ -38,6 +38,9 @@ custom_post_chroot()
 [ -e /home/memes/aws ] && sudo chown -R memes:memes /home/memes/aws
 cat >> /home/memes/.profile <<eof
 
+# MEmes' aliases
+alias ll='ls -alF'
+
 # Include AWS settings, if present
 [ -s /home/memes/aws/aws.rc ] && . /home/memes/aws/aws.rc
 
