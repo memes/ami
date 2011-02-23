@@ -2,27 +2,127 @@
 # Implements the EBS flavour of AMI creation
 #
 
+# Default device to use for EBS volume
+DEFAULT_EBS_DEV=${DEFAULT_EBS_DEV:-/dev/sdf}
+
+# Returns the instance id of the machine
+get_instance_id()
+{
+    wget -q --timeout=60 -O- http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null
+    return 0
+}
+
+# Wait for volume status
+wait_for_vol_status()
+{
+    [ $# -ge 1 ] || error "wait_for_vol_status: no arguments supplied"
+    local vol_status=
+    local count=0
+    while [ -z "${vol_status}" -a count -lt 10 ]
+    do
+	vol_status=$(ec2-describe-volumes $@ 2>/dev/null)
+	sleep $(($count * 5))
+    done
+    [ $count -ge 10 ] && \
+	error "flavour_initialise: timeout waiting for volume to match requested status"
+    echo ${vol_status}
+}
+    
 # Perform initialisation steps for an EBS AMI
-# - remove if necessary, then create a directory for the initial chroot files
 flavour_initialise()
 {
     local base=
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && \
 	error "flavour_initialise: \$base is unspecified"
+    rm_chroot "${base}"
+    mkdir -p "${base}" || \
+	error "flavour_initialise: unable to create directory ${base}"
+
+    # Make sure this is an EC2 instance
+    local instance_id=$(get_instance_id)
+    [ -z "${instance_id}" ] && \
+	error "flavour_initialise: could not get this server's instance id: must be running on an EC2 machine to use"
+    local zone=$(wget -q --timeout=60 -O- http://169.254.169.254/latest/meta-data/placement/availability-zone 2>/dev/null)
+    [ -z "${zone_id}" ] && \
+	error "flavour_initialise: could not get this server's availability zone: must be running on an EC2 machine to use"
+
+    # Create a volume to be used
+    local ebs_size=${get_ami_img_size}
+    [ ${ebs_size} -ne ${ebs_size} >/dev/null 2>/dev/null ]
+    [ $? -ne 1 -a -n "${ebs_size}" ] && \
+	error "flavour_initialise: EBS volume size is not a number: ${ebs_size}"
+    ebs_size=$(($ebs_size / (1024 * 1024 * 1024)))
+    local vol_id=$(ec2-create-volume --size ${ebs_size} --availability-zone ${zone} 2>/dev/null | awk '/^VOLUME/ {print $2}')
+    [ -z "${vol_id}" ] && \
+	error "flavour_initialise: EBS volume was not created"
+
+    # Wait for the volume to be ready
+    local vol_status=$(wait_for_vol_status ${vol_id} --filter="status=available")
+
+    # Attach the volume
+    part_dev=${part_dev:-$DEFAULT_EBS_DEV}
+    ec2-attach-volume ${vol_id} --instance ${instance_id} --device ${part_dev} >/dev/null 2>/dev/null
+    vol_status=$(wait_for_vol_status ${vol_id} --filter="attachment.status=attached")
+
+    # Format the device
+    [ -b ${part_dev} ] || \
+	error "flavour_initialise: ${part_dev} is not a block device"
+    echo y | ${SUDO} mkfs.ext3 -L root ${part_dev} || \
+	error "flavour_initialise: mkfs.ext3 returned error code $?"
+    ${SUDO} mount ${part_dev} ${base}
+    ismounted "${base}" || \
+	error "flavour_initialise: ${part_dev} is not mounted at ${base}"
 }
 
-# EBS AMI needs to be bundled, uploaded and registered with AWS to be used
-flavour_do_ami()
+# Finalise the EBS volume
+flavour_post_base()
 {
-    [ -n "${AMI_SKIP}" ] && \
-	warn "flavour_do_ami: user requested skip of AMI registration; not recommended for EBS volumes" && \
-	return 0
     local base=
     [ $# -ge 1 ] && base="$1"
-    [ -z "${base}" ] && \
-	error "flavour_do_ami: \$base is unspecified"
-    [ -d "${base}" ] || \
-	error "flavour_do_ami: ${base} is invalid"
-    return 0
+    [ -z "${base}" ] && error "flavour_post_base: \$base is unspecified"
+    [ -d "${base}" ] || error "flavour_post_base: ${base} is invalid"
+    # Unmount base and detach EBS volume
+    ismounted "${base}" && ${SUDO} umount "${base}"
+    ismounted "${base}" && error "flavour_post_base: ${base} is still mounted"
+    local instance_id=$(get_instance_id)
+    [ -z "${instance_id}" ] && \
+	error "flavour_post_base: could not determine instance id"
+    local vol_id=$(wait_for_vol_status --filter="attachment.instance-id=${instance_id}" --filter="attachment.device=${part_dev}" | awk '/ATTACHMENT/ {print $2}' 2>/dev/null)
+    [ -z "${vol_id}" ] || \
+	error "flavour_post_base: could not determine volume id"
+    ec2-detach-volume ${vol_id} >/dev/null 2>/dev/null
+    local vol_status=$(wait_for_vol_status ${vol_id} --filter="attachment.status=detached")
+
+    # Make a snapshot of the volume for registration
+    local snapshot_id=$(ec2-create-snapshot ${vol_id} --description "Base snapshot for: $(get_ami_description)" 2>/dev/null | awk '/SNAPSHOT/ {print $2}')
+    [ -z "${snapshot_id}" ] && \
+	error "flavour_post_base: could not determine snapshot id"
+    local snapshot_status=
+    local count=0
+    while [ -z "${snapshot_status}" -a count -lt 10 ]
+    do
+	snapshot_status=$(ec2-describe-snapshots ${snapshot_id} --filter="status=completed" 2>/dev/null)
+	sleep $(($count * 5))
+    done
+    [ $count -ge 10 ] && \
+	error "flavour_initialise: timeout waiting for snapshot to complete"
+
+    # Register the snapshot as a new instance
+    local kernel_id=$(eval "echo \${EC2_DEFAULT_KERNEL_ID_${AMI_ARCH}}")
+    local ramdisk_id=$(eval "echo \${EC2_DEFAULT_RAMDISK_ID_${AMI_ARCH}}")
+    local block_mappings="--block-device-mapping /dev/sda1=${snapshot_id}"
+    [ "i386" = "${AMI_ARCH}" ] && \
+        block_mappings="${block_mappings},ephemeral0=sda2,swap=sda3"
+    [ "x86_64" = "${AMI_ARCH}" ] && \
+        block_mappings="${block_mappings},ephemeral0=sdb,ephemeral1=sdc"
+
+    ec2-register --name="$(get_ami_name)" \
+	--description="$(get_ami_description)" \
+	--architecture ${AMI_ARCH} \
+	${kernel_id:+--kernel "${kernel_id}"} \
+        ${ramdisk_id:+--ramdisk "${ramdisk_id}"} \
+	--root-device-name=/dev/sda1
+	${block_mappings} \
+	--snapshot ${snapshot_id}
 }
