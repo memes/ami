@@ -10,9 +10,9 @@ flavour_initialise()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && \
 	error "flavour_initialise: \$base is unspecified"
-    rm_chroot "${base_dir}"
-    mkdir -p "${base_dir}" || \
-	error "flavour_initialise: unable to create directory ${base_dir}"
+    rm_chroot "${base}"
+    mkdir -p "${base}" || \
+	error "flavour_initialise: unable to create directory ${base}"
 }
 
 # S3 AMI can be tested in KVM before progressing, so allow the creation of a KVM
