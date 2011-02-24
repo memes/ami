@@ -137,7 +137,7 @@ eof
 # Update sudoers file
 cat >> /etc/sudoers <<eof
 # memes password is random, so don't prompt for sudo
-memes ALL=(ALL:ALL) NOPASSWD:ALL
+memes ALL=(ALL) NOPASSWD:ALL
 eof
 
 # Install any remaining base packages or extra packages
