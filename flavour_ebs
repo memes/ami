@@ -50,9 +50,15 @@ flavour_initialise()
     # Create a volume to be used
     local ebs_size=${get_ami_img_size}
     [ ${ebs_size} -ne ${ebs_size} >/dev/null 2>/dev/null ]
-    [ $? -ne 1 -a -n "${ebs_size}" ] && \
-	error "flavour_initialise: EBS volume size is not a number: ${ebs_size}"
-    ebs_size=$(($ebs_size / (1024 * 1024 * 1024)))
+    if [ $? -ne 1 -a -n "${ebs_size}" ]; then
+	warn "flavour_initialise: EBS volume size is not a number: ${ebs_size}"
+	ebs_size=
+    fi
+    if [ -z "${ebs_size}" ]; then
+	warn "flavour_initialise: EBS volume size is unspecified, using default value [${DEFAULT_IMG_SIZE}]"
+	ebs_size=${DEFAULT_IMG_SIZE}
+    fi
+    ebs_size=$((${ebs_size} / (1024 * 1024 * 1024)))
     local vol_id=$(ec2-create-volume --size ${ebs_size} --availability-zone ${zone} 2>/dev/null | awk '/^VOLUME/ {print $2}')
     [ -z "${vol_id}" ] && \
 	error "flavour_initialise: EBS volume was not created"
