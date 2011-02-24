@@ -60,7 +60,7 @@ get_ebs_size()
 	ebs_raw_size=${DEFAULT_IMG_SIZE}
     fi
     local ebs_size=$((${ebs_raw_size} / (1024 * 1024 * 1024)))
-    [ -z "${ebs_size}" -o ${ebs_size} lt 1 ] && \
+    [ -z "${ebs_size}" -o ${ebs_size} -lt 1 ] && \
 	error "get_ebs_size: calculated EBS size is too small: ${ebs_size}"
     echo "${ebs_size}"
     return 0
