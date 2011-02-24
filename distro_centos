@@ -107,7 +107,7 @@ distro_prepare_chroot()
     [ -d "${base}" ] || error "distro_prepare_chroot: ${base} is invalid"
     ${SUDO} chroot "${base}" <<EOF
 # Recreate required devices
-/sbin/MAKEDEV -a mem null port zero core full ram tty console random urandom
+/sbin/MAKEDEV -a mem null port zero core full ram tty console random urandom sda sdb sdc sdf
 
 # prepare for reinstall of packages
 touch /etc/mtab
