@@ -15,7 +15,6 @@ get_instance_id()
 # Wait for volume status
 wait_for_vol_status()
 {
-    set -x
     [ $# -ge 1 ] || error "wait_for_vol_status: no arguments supplied"
     local vol_status=
     local count=0
@@ -28,13 +27,11 @@ wait_for_vol_status()
     [ ${count} -ge 10 ] && \
 	error "wait_for_vol_status: timeout waiting for volume to match requested status"
     echo ${vol_status}
-    set +x
 }
     
 # Wait for snapshot status
 wait_for_snapshot_status()
 {
-    set -x
     [ $# -ge 1 ] || error "wait_for_snapshot_status: no arguments supplied"
     local snapshot_status=
     local count=0
@@ -47,7 +44,6 @@ wait_for_snapshot_status()
     [ ${count} -ge 10 ] && \
 	error "wait_for_snapshot_status: timeout waiting for volume to match requested status"
     echo ${snapshot_status}
-    set +x
 }
     
 # Perform initialisation steps for an EBS AMI
