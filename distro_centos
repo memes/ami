@@ -30,7 +30,7 @@ distro_prepare_base()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "distro_prepare_base: \$base is unspecified"
     [ -d "${base}" ] || error "distro_prepare_base: ${base} is invalid"
-    mkdir -p "${base}/etc/yum.repos.d"
+    ${SUDO} mkdir -p "${base}/etc/yum.repos.d"
     [ -d "${base}/etc/yum.repos.d" ] || \
         error "distro_prepare_base: ${base}/etc/yum.repos.d does not exist"
     # Prepare for yum installation
