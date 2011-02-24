@@ -713,7 +713,7 @@ EOF
     for v in "${base}/boot/vmlinuz*"; do
         vmlinuz=$(basename ${v})
         version=$(echo "${vmlinuz}" | sed -e's/vmlinuz-//g')
-        initrd=$(find "${base}/boot/" -iname "initrd*${version}*")
+        initrd=$(find "${base}/boot/" -iname "initrd*${version}*" | grep -v '.bak$')
         if [ -n "${vmlinuz}" ]; then
             ${SUDO} sh -c "cat >> \"${base}/boot/grub/grub.cfg\"" <<EOF
 
