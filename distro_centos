@@ -120,7 +120,7 @@ rpm --initdb
 yum -y ${EXCLUDE} --disablerepo="*" --enablerepo="memes*" \
     install ${ROOT_PKGS} ${BASE_PKGS}
 yum-complete-transaction -y ${EXCLUDE}
-find / -iname "*rpmnew" -exec rm -f {} \;
+find / -xdev -iname "*rpmnew" -exec rm -f {} \;
 
 # Don't need the memes repo definitions at this point
 rm -rf /etc/yum.repos.d/memes.repo /var/cache/yum/memes*
