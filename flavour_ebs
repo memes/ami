@@ -44,7 +44,7 @@ flavour_initialise()
     [ -z "${instance_id}" ] && \
 	error "flavour_initialise: could not get this server's instance id: must be running on an EC2 machine to use"
     local zone=$(wget -q --timeout=60 -O- http://169.254.169.254/latest/meta-data/placement/availability-zone 2>/dev/null)
-    [ -z "${zone_id}" ] && \
+    [ -z "${zone}" ] && \
 	error "flavour_initialise: could not get this server's availability zone: must be running on an EC2 machine to use"
 
     # Create a volume to be used
