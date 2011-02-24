@@ -46,6 +46,26 @@ wait_for_snapshot_status()
     echo ${snapshot_status}
 }
     
+# Get the size of the EBS volume in GB
+get_ebs_size()
+{
+    local ebs_raw_size=$(get_ami_img_size)
+    [ ${ebs_raw_size} -ne ${ebs_raw_size} >/dev/null 2>/dev/null ]
+    if [ $? -ne 1 -a -n "${ebs_raw_size}" ]; then
+	warn "get_ebs_size: EBS volume size is not a number: ${ebs_raw_size}"
+	ebs_raw_size=
+    fi
+    if [ -z "${ebs_raw_size}" ]; then
+	warn "get_ebs_size: EBS volume size is unspecified, using default value [${DEFAULT_IMG_SIZE}]"
+	ebs_raw_size=${DEFAULT_IMG_SIZE}
+    fi
+    local ebs_size=$((${ebs_raw_size} / (1024 * 1024 * 1024)))
+    [ -z "${ebs_size}" -o ${ebs_size} lt 1 ] && \
+	error "get_ebs_size: calculated EBS size is too small: ${ebs_size}"
+    echo "${ebs_size}"
+    return 0
+}
+
 # Perform initialisation steps for an EBS AMI
 flavour_initialise()
 {
@@ -66,17 +86,8 @@ flavour_initialise()
 	error "flavour_initialise: could not get this server's availability zone: must be running on an EC2 machine to use"
 
     # Create a volume to be used
-    local ebs_size=${get_ami_img_size}
-    [ ${ebs_size} -ne ${ebs_size} >/dev/null 2>/dev/null ]
-    if [ $? -ne 1 -a -n "${ebs_size}" ]; then
-	warn "flavour_initialise: EBS volume size is not a number: ${ebs_size}"
-	ebs_size=
-    fi
-    if [ -z "${ebs_size}" ]; then
-	warn "flavour_initialise: EBS volume size is unspecified, using default value [${DEFAULT_IMG_SIZE}]"
-	ebs_size=${DEFAULT_IMG_SIZE}
-    fi
-    ebs_size=$((${ebs_size} / (1024 * 1024 * 1024)))
+    local ebs_size=$(get_ebs_size)
+    [ -z "${ebs_size}" ] && error "flavour_initialise: EBS size is unspecified"
     local vol_id=$(ec2-create-volume --size ${ebs_size} --availability-zone ${zone} 2>/dev/null | awk '/^VOLUME/ {print $2}')
     [ -z "${vol_id}" ] && \
 	error "flavour_initialise: EBS volume was not created"
@@ -106,6 +117,7 @@ flavour_post_base()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "flavour_post_base: \$base is unspecified"
     [ -d "${base}" ] || error "flavour_post_base: ${base} is invalid"
+
     # Unmount base and detach EBS volume
     ismounted "${base}" && ${SUDO} umount "${base}"
     ismounted "${base}" && error "flavour_post_base: ${base} is still mounted"
@@ -118,6 +130,11 @@ flavour_post_base()
     ec2-detach-volume ${vol_id} >/dev/null 2>/dev/null
     local vol_status=$(wait_for_vol_status ${vol_id} --filter="attachment.status=detached")
 
+    # Get the volume size
+    local vol_size=$(wait_for_vol_status ${vol_id} | awk '/^VOLUME/ {print $3}')
+    [ -z "${vol_size}" ] && \
+	error "flavour_post_base: couldn't determine volume size"
+
     # Make a snapshot of the volume for registration
     local snapshot_id=$(ec2-create-snapshot ${vol_id} --description "Base snapshot for: $(get_ami_description)" 2>/dev/null | awk '/SNAPSHOT/ {print $2}')
     [ -z "${snapshot_id}" ] && \
@@ -127,7 +144,7 @@ flavour_post_base()
     # Register the snapshot as a new instance
     local kernel_id=$(eval "echo \${EC2_DEFAULT_KERNEL_ID_${AMI_ARCH}}")
     local ramdisk_id=$(eval "echo \${EC2_DEFAULT_RAMDISK_ID_${AMI_ARCH}}")
-    local block_mappings="--block-device-mapping /dev/sda1=${snapshot_id}"
+    local block_mappings="--block-device-mapping /dev/sda1=${snapshot_id}:${vol_size}:false"
     [ "i386" = "${AMI_ARCH}" ] && \
         block_mappings="${block_mappings},ephemeral0=sda2,swap=sda3"
     [ "x86_64" = "${AMI_ARCH}" ] && \
@@ -138,7 +155,7 @@ flavour_post_base()
 	--architecture ${AMI_ARCH} \
 	${kernel_id:+--kernel "${kernel_id}"} \
         ${ramdisk_id:+--ramdisk "${ramdisk_id}"} \
-	--root-device-name=/dev/sda1
+	--root-device-name=/dev/sda1 \
 	${block_mappings} \
 	--snapshot ${snapshot_id}
 }
