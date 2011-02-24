@@ -37,7 +37,7 @@ wait_for_snapshot_status()
     local count=0
     while [ -z "${snapshot_status}" -a ${count} -lt 10 ]
     do
-	snapshot_status=$(ec2-describe-snapshot $@ 2>/dev/null)
+	snapshot_status=$(ec2-describe-snapshots $@ 2>/dev/null)
 	count=$(($count + 1))
 	sleep $(($count * 5))
     done
@@ -128,7 +128,9 @@ flavour_post_base()
     [ -z "${vol_id}" ] && \
 	error "flavour_post_base: could not determine volume id"
     ec2-detach-volume ${vol_id} >/dev/null 2>/dev/null
-    local vol_status=$(wait_for_vol_status ${vol_id} --filter="attachment.status=detached")
+    local vol_status=$(wait_for_vol_status ${vol_id} --filter="status=available")
+    [ -z "${vol_status}" ] && \
+	error "flavour_post_base: EBS volume did not detach"
 
     # Get the volume size
     local vol_size=$(wait_for_vol_status ${vol_id} | awk '/^VOLUME/ {print $3}')
@@ -140,6 +142,8 @@ flavour_post_base()
     [ -z "${snapshot_id}" ] && \
 	error "flavour_post_base: could not determine snapshot id"
     local snapshot_status=$(wait_for_snapshot_status ${snapshot_id} --filter="status=completed")
+    [ -z "${snapshot_status}" ] && \
+	error "flavour_post_base: EBS snapshot did not complete"
 
     # Register the snapshot as a new instance
     local kernel_id=$(eval "echo \${EC2_DEFAULT_KERNEL_ID_${AMI_ARCH}}")
@@ -156,6 +160,5 @@ flavour_post_base()
 	${kernel_id:+--kernel "${kernel_id}"} \
         ${ramdisk_id:+--ramdisk "${ramdisk_id}"} \
 	--root-device-name=/dev/sda1 \
-	${block_mappings} \
-	--snapshot ${snapshot_id}
+	${block_mappings}
 }
