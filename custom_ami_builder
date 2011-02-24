@@ -87,7 +87,7 @@ custom_get_ami_img_name()
 # Return a file size for the AMI image
 custom_get_ami_img_size()
 {
-    # 2Gb should be enough
+    # 10Gb should be enough
     echo $((1024 * 1024 * 1024 * 10))
 }
 
