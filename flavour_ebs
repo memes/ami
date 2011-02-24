@@ -19,15 +19,34 @@ wait_for_vol_status()
     [ $# -ge 1 ] || error "wait_for_vol_status: no arguments supplied"
     local vol_status=
     local count=0
-    while [ -z "${vol_status}" -a count -lt 10 ]
+    while [ -z "${vol_status}" -a ${count} -lt 10 ]
     do
 	vol_status=$(ec2-describe-volumes $@ 2>/dev/null)
 	count=$(($count + 1))
 	sleep $(($count * 5))
     done
-    [ $count -ge 10 ] && \
-	error "flavour_initialise: timeout waiting for volume to match requested status"
+    [ ${count} -ge 10 ] && \
+	error "wait_for_vol_status: timeout waiting for volume to match requested status"
     echo ${vol_status}
+    set +x
+}
+    
+# Wait for snapshot status
+wait_for_snapshot_status()
+{
+    set -x
+    [ $# -ge 1 ] || error "wait_for_snapshot_status: no arguments supplied"
+    local snapshot_status=
+    local count=0
+    while [ -z "${snapshot_status}" -a ${count} -lt 10 ]
+    do
+	snapshot_status=$(ec2-describe-snapshot $@ 2>/dev/null)
+	count=$(($count + 1))
+	sleep $(($count * 5))
+    done
+    [ ${count} -ge 10 ] && \
+	error "wait_for_snapshot_status: timeout waiting for volume to match requested status"
+    echo ${snapshot_status}
     set +x
 }
     
@@ -107,16 +126,7 @@ flavour_post_base()
     local snapshot_id=$(ec2-create-snapshot ${vol_id} --description "Base snapshot for: $(get_ami_description)" 2>/dev/null | awk '/SNAPSHOT/ {print $2}')
     [ -z "${snapshot_id}" ] && \
 	error "flavour_post_base: could not determine snapshot id"
-    local snapshot_status=
-    local count=0
-    while [ -z "${snapshot_status}" -a count -lt 10 ]
-    do
-	snapshot_status=$(ec2-describe-snapshots ${snapshot_id} --filter="status=completed" 2>/dev/null)
-	count=$(($count + 1))
-	sleep $(($count * 5))
-    done
-    [ $count -ge 10 ] && \
-	error "flavour_initialise: timeout waiting for snapshot to complete"
+    local snapshot_status=$(wait_for_snapshot_status ${snapshot_id} --filter="status=completed")
 
     # Register the snapshot as a new instance
     local kernel_id=$(eval "echo \${EC2_DEFAULT_KERNEL_ID_${AMI_ARCH}}")
