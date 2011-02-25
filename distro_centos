@@ -226,7 +226,7 @@ chmod 0600 /root/.ssh/authorized_keys2
 chown -R root:root /root/.ssh
 
 # Add memes with random password
-useradd -c "Matthew Emes" -m memes
+useradd -c "Matthew Emes" -m -s /bin/bash memes
 echo "${MEMES_PASSWORD}" | passwd --stdin memes
 mkdir -p /home/memes/.ssh
 touch /home/memes/.ssh/authorized_keys2
