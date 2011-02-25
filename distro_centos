@@ -70,18 +70,21 @@ EOF
 # architecture wanted, not the architecture of the host machine
 [memes_os]
 name=CentOS ${CENTOS_VER} - ${AMI_ARCH} - OS
+baseurl=${MIRROR_URL}/os/${AMI_ARCH}
 mirrorlist=http://mirrorlist.centos.org/?release=${CENTOS_VER}&arch=${AMI_ARCH}&repo=os
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
 enabled=1
 
 [memes_updates]
 name=CentOS ${CENTOS_VER} - ${AMI_ARCH} - Updates
+baseurl=${MIRROR_URL}/updates/${AMI_ARCH}
 mirrorlist=http://mirrorlist.centos.org/?release=${CENTOS_VER}&arch=${AMI_ARCH}&repo=updates
 enabled=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
 
 [memes_epel]
 name=Extra Packages for Enterprise Linux 5 - ${AMI_ARCH}
+baseurl=http://download.fedora.redhat.com/pub/epel/5/${AMI_ARCH}
 mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=epel-5&arch=${AMI_ARCH}
 failovermethod=priority
 enabled=1
