@@ -59,9 +59,9 @@ update_hostname()
     rm -f /etc/ssh/ssh_host_key /etc/ssh/ssh_host_key.pub \
 	/etc/ssh/ssh_host_dsa_key /etc/ssh/ssh_host_dsa_key.pub \
 	/etc/ssh/ssh_host_rsa_key /etc/ssh/ssh_host_rsa_key.pub
-    /usr/bin/ssh-keygen -q -t rsa1 -C'' -N'' -f /etc/ssh/ssh_host_key >/dev/null 2>/dev/null
-    /usr/bin/ssh-keygen -q -t dsa -C'' -N'' -f /etc/ssh/ssh_host_dsa_key >/dev/null 2>/dev/null
-    /usr/bin/ssh-keygen -q -t rsa -C'' -N'' -f /etc/ssh/ssh_host_rsa_key >/dev/null 2>/dev/null
+    /usr/bin/ssh-keygen -q -t rsa1 -C ${new_hostname} -N '' -f /etc/ssh/ssh_host_key >/dev/null 2>/dev/null
+    /usr/bin/ssh-keygen -q -t dsa -C ${new_hostname} -N '' -f /etc/ssh/ssh_host_dsa_key >/dev/null 2>/dev/null
+    /usr/bin/ssh-keygen -q -t rsa -C ${new_hostname} -N '' -f /etc/ssh/ssh_host_rsa_key >/dev/null 2>/dev/null
     chmod 600 /etc/ssh/ssh_host_key /etc/ssh/ssh_host_dsa_key \
 	/etc/ssh/ssh_host_rsa_key
     chmod 644 /etc/ssh/ssh_host_key.pub /etc/ssh/ssh_host_dsa_key.pub \
