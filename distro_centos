@@ -108,6 +108,8 @@ distro_prepare_chroot()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "distro_prepare_chroot: \$base is unspecified"
     [ -d "${base}" ] || error "distro_prepare_chroot: ${base} is invalid"
+    [ -r "${base}/etc/resolv.conf" ] || \
+	${SUDO} cp /etc/resolv.conf "${base}/etc/resolv.conf"
     ${SUDO} chroot "${base}" <<EOF
 # Recreate required devices
 /sbin/MAKEDEV -a mem null port zero core full ram tty console random urandom sda sdb sdc sdf
