@@ -2,10 +2,13 @@
 #
 # SysV init script to configure the AMI instance at boot
 #
+# chkconfig: 2345 99 1
+# description: Run-time configuration of the AMI at boot
+
 ### BEGIN INIT INFO
 # Provides:          ami_sysv
 # Required-Start:    $network
-# Required-Stop:     
+# Required-Stop:     $ALL
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: Run-time configuration of the AMI at boot
