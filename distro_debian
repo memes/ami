@@ -48,7 +48,9 @@ distro_prepare_chroot()
     [ -d "${base}" ] || error "distro_prepare_chroot: ${base} is invalid"
     ${SUDO} chroot "${base}" <<EOF
 # Recreate required devices
-/sbin/MAKEDEV -d mem null zero ram tty console random urandom sda sdb sdc sdf
+cd /dev
+/sbin/MAKEDEV mem null zero ram tty console random urandom sda sdb sdc sdf
+cd
 
 # Make sure contrib and non-free sections are included in apt
 sed -i -e's/ main$/ main contrib non-free/g' /etc/apt/sources.list
