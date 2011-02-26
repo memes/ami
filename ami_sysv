@@ -2,7 +2,7 @@
 #
 # SysV init script to configure the AMI instance at boot
 #
-# chkconfig: 2345 99 1
+# chkconfig: 2345 98 2
 # description: Run-time configuration of the AMI at boot
 
 ### BEGIN INIT INFO
