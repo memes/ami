@@ -150,15 +150,15 @@ flavour_post_base()
     local ramdisk_id=$(eval "echo \${EC2_DEFAULT_RAMDISK_ID_${AMI_ARCH}}")
     local block_mappings="--block-device-mapping /dev/sda1=${snapshot_id}:${vol_size}:false"
     [ "i386" = "${AMI_ARCH}" ] && \
-        block_mappings="${block_mappings},ephemeral0=sda2,swap=sda3"
+        block_mappings="${block_mappings},/dev/sda2=ephemeral0,/dev/sda3=swap"
     [ "x86_64" = "${AMI_ARCH}" ] && \
-        block_mappings="${block_mappings},ephemeral0=sdb,ephemeral1=sdc"
+        block_mappings="${block_mappings},/dev/sdb=ephemeral0,/dev/sdc=ephemeral1"
 
-    ec2-register --name="$(get_ami_name)" \
-	--description="$(get_ami_description)" \
+    ec2-register --name "$(get_ami_name)" \
+	--description "$(get_ami_description)" \
 	--architecture ${AMI_ARCH} \
 	${kernel_id:+--kernel "${kernel_id}"} \
         ${ramdisk_id:+--ramdisk "${ramdisk_id}"} \
-	--root-device-name=/dev/sda1 \
+	--root-device-name /dev/sda1 \
 	${block_mappings}
 }
