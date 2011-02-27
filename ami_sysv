@@ -50,12 +50,16 @@ update_hostname()
     [ -z "${new_hostname}" ] && return 0
     [ "${new_hostname}" = "$(hostname -f)" ] && return 0
     short_hostname=$(echo ${new_hostname} | cut -d. -f1)
-    
+
     # Update the permanent hostname on this instance
     [ -e /etc/hostname ] && echo "${short_hostname}" > /etc/hostname
     [ -e /etc/sysconfig/network ] && \
 	sed -i -e"/^HOSTNAME/cHOSTNAME=${new_hostname}" /etc/sysconfig/network
-    sed -i -e"/^127\.0\.0\.1/c127.0.0.1 ${new_hostname} ${short_hostname} localhost localhost.localdomain" /etc/hosts
+    if [ "${new_hostname}" = "${short_hostname}" ]; then
+	sed -i -e"/^127\.0\.0\.1/c127.0.0.1 ${short_hostname} localhost localhost.localdomain" /etc/hosts
+    else
+	sed -i -e"/^127\.0\.0\.1/c127.0.0.1 ${new_hostname} ${short_hostname} localhost localhost.localdomain" /etc/hosts
+    fi
     hostname ${short_hostname}
 
     # Update SSH keys for the new host
