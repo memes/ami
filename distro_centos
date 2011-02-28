@@ -110,6 +110,13 @@ distro_prepare_chroot()
     [ -d "${base}" ] || error "distro_prepare_chroot: ${base} is invalid"
     [ -r "${base}/etc/resolv.conf" ] || \
 	${SUDO} cp /etc/resolv.conf "${base}/etc/resolv.conf"
+    # Move yum transaction file to the correct location before chrooting
+    [ -d "${base}${base}/var/lib/yum" ] && \
+	rsync -avP --delete "${base}${base}/var/lib/yum/" "${base}/var/lib/yum/"
+    # Make sure the MEmes directory is not present in chroot
+    [ -d "${base}/home/memes" ] && ${SUDO} rm -rf "${base}/home/memes"
+    [ -d "${base}/home/memes" ] && \
+	error "distro_prepare_chroot: ${base}/home/memes still exists"
     ${SUDO} chroot "${base}" <<EOF
 # Recreate required devices
 cd /dev
