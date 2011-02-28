@@ -123,7 +123,7 @@ custom_add_memes_keys()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "custom_add_memes_keys: \$base is unspecified"
     if [ -d /media/protected/.ssh ]; then
-        ${SUDO} cp -a /media/protected/.ssh/memes@matthewemes.com*pub "${base}/home/memes/.ssh/"
+        ${SUDO} cp -a /media/protected/.ssh/*pub "${base}/home/memes/.ssh/"
     else
         [ -d ~/.ssh/ ] && \
             ${SUDO} cp -a ~/.ssh/*pub "${base}/home/memes/.ssh/"
