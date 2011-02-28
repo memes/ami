@@ -5,6 +5,10 @@
 # Default device to use for EBS volume
 DEFAULT_EBS_DEV=${DEFAULT_EBS_DEV:-/dev/sdf}
 
+# Default wait loop count
+DEFAULT_WAIT_LOOP_COUNT=${DEFAULT_WAIT_LOOP_COUNT:-10}
+DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT=${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT:-5}
+
 # Returns the instance id of the machine
 get_instance_id()
 {
@@ -18,11 +22,11 @@ wait_for_vol_status()
     [ $# -ge 1 ] || error "wait_for_vol_status: no arguments supplied"
     local vol_status=
     local count=0
-    while [ -z "${vol_status}" -a ${count} -lt 10 ]
+    while [ -z "${vol_status}" -a ${count} -lt ${DEFAULT_WAIT_LOOP_COUNT} ]
     do
 	vol_status=$(ec2-describe-volumes $@ 2>/dev/null)
 	count=$(($count + 1))
-	sleep $(($count * 5))
+	sleep $(($count * ${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT}))
     done
     [ ${count} -ge 10 ] && \
 	error "wait_for_vol_status: timeout waiting for volume to match requested status"
@@ -35,14 +39,14 @@ wait_for_snapshot_status()
     [ $# -ge 1 ] || error "wait_for_snapshot_status: no arguments supplied"
     local snapshot_status=
     local count=0
-    while [ -z "${snapshot_status}" -a ${count} -lt 10 ]
+    while [ -z "${snapshot_status}" -a ${count} -lt ${DEFAULT_WAIT_LOOP_COUNT} ]
     do
 	snapshot_status=$(ec2-describe-snapshots $@ 2>/dev/null)
 	count=$(($count + 1))
-	sleep $(($count * 5))
+	sleep $(($count * ${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT}))
     done
     [ ${count} -ge 10 ] && \
-	error "wait_for_snapshot_status: timeout waiting for volume to match requested status"
+	error "wait_for_snapshot_status: timeout waiting for snapshot to match requested status"
     echo ${snapshot_status}
 }
     
