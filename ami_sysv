@@ -211,12 +211,10 @@ Full details of the instance are shown below.
 EOF
 }
 
-# Announce that the instance is stopping
+# Handle shutdown; nothing to do
 stop()
 {
-    send_email "instance is stopping" <<EOF
-The AWS server named ${host} is shutting down.
-EOF
+    return 0
 }
 
 if [ "$(id -u)" != "0" ]; then
