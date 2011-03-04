@@ -2,7 +2,7 @@
 #
 # SysV init script to configure the AMI instance at boot
 #
-# chkconfig: 2345 98 2
+# chkconfig: 2345 97 3
 # description: Run-time configuration of the AMI at boot
 
 ### BEGIN INIT INFO
@@ -190,7 +190,7 @@ send_email()
     [ -s /etc/default/ami_sysv ] && . /etc/default/ami_sysv
     [ -s /etc/sysconfig/ami_sysv ] && . /etc/sysconfig/ami_sysv
     local owner=${AMI_OWNER:-${DEFAULT_AMI_OWNER}}
-    [ -n "${owner}" ] && \
+    [ -n "${AMI_NO_EMAIL}" -a -n "${owner}" ] && \
 	mail -s "AWS $(hostname -s): $1" ${AMI_CC_LIST:+-c ${AMI_CC_LIST}} ${owner}
 }
 

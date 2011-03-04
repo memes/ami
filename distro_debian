@@ -196,8 +196,10 @@ distro_post_chroot()
 # Add a SysV init script to configure the instance at boot
 if [ -s /etc/init.d/ami_sysv ]; then
     cat > /etc/default/ami_sysv <<eof
+# Set to a non-blank value to disable sending email on startup
+AMI_NO_EMAIL=
+
 # AMI instance owner; email is sent to this address when the instance is started
-# or stopped
 AMI_OWNER=memes@matthewemes.com
 
 # Others to receive email; must be a comma separated list of emails
@@ -210,7 +212,7 @@ AMI_UPDATE_KEYS=
 eof
     chmod 0755 /etc/init.d/ami_sysv
     chown root:root /etc/init.d/ami_sysv
-    update-rc.d ami_sysv defaults 98 02
+    update-rc.d ami_sysv defaults 97 03
 fi
 EOF
     fi
