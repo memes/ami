@@ -81,15 +81,6 @@ baseurl=${MIRROR_URL}/updates/${AMI_ARCH}
 mirrorlist=http://mirrorlist.centos.org/?release=${CENTOS_VER}&arch=${AMI_ARCH}&repo=updates
 enabled=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
-
-[memes_epel]
-name=Extra Packages for Enterprise Linux 5 - ${AMI_ARCH}
-baseurl=http://download.fedora.redhat.com/pub/epel/5/${AMI_ARCH}
-mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=epel-5&arch=${AMI_ARCH}
-failovermethod=priority
-enabled=1
-gpgcheck=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL
 EOF
     # Install minimum set of packages in order to get functional system
     # Note: these will need to be reinstalled within the chroot to resolve
