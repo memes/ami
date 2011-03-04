@@ -47,6 +47,7 @@ distro_prepare_chroot()
     [ -z "${base}" ] && error "distro_prepare_chroot: \$base is unspecified"
     [ -d "${base}" ] || error "distro_prepare_chroot: ${base} is invalid"
     ${SUDO} chroot "${base}" <<EOF
+export DEBIAN_FRONTEND=noninteractive
 # Recreate required devices
 cd /dev
 /sbin/MAKEDEV mem null zero ram tty console random urandom sda sdb sdc sdf
@@ -92,6 +93,17 @@ exim4-config exim4/dc_smarthost string
 exim4-config exim4/dc_relaydomains string
 exim4-config exim4/dc_relaynets string
 exim4-config exim4/dc_minimaldns boolean false
+ddclient ddclient/password password
+ddclient ddclient/server string
+ddclient ddclient/protocol select dyndns2
+ddclient ddclient/run_daemon boolean false
+ddclient ddclient/run_ipup boolean false
+ddclient ddclient/username string
+ddclient ddclient/daemon_interval string 0
+ddclient ddclient/names string
+ddclient ddclient/interface string
+ddclient ddclient/service select other
+ddclient ddclient/modifiedconfig note
 eof
 LC_ALL=C dpkg-reconfigure --frontend noninteractive --all
 echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
@@ -265,7 +277,7 @@ do_bootfloppy = no
 do_initrd = yes
 link_in_boot = no
 eof
-apt-get install -y linux-image-${kernel_flavour}
+DEBIAN_FRONTEND=noninteractive apt-get install -y linux-image-${kernel_flavour}
 update-rc.d -f ami_sysv remove
 EOF
 
