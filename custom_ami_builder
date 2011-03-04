@@ -78,8 +78,8 @@ apt-get install -y --no-install-recommends sun-java6-jdk
 cat > /etc/rc.local <<eof
 # Update no-ip with this new IP(
 hostname -f | grep -q no-ip.org >/dev/null 2>/dev/null && \\\\
-    ddclient -daemon=0 -syslog -quiet -force -ssl -server dynupdate.no-ip.com \\\\
-        -protocol=noip -use=web -web=checkip.dyndns.org/ \\\\
+    ddclient -daemon=0 -syslog -quiet -force -ssl -server=freedns.afraid.org \\\\
+        -protocol=freedns -use=web -web=checkip.dyndns.org/ \\\\
         -web-skip='IP Address' -login=${DDCLIENT_LOGIN} -password=${DDCLIENT_PASSWORD} \\\\
         -host=\\\$(hostname -f)
 exit 0
