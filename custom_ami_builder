@@ -16,13 +16,13 @@ distro=debian
 # Return the directory to use for base install
 custom_get_base_directory()
 {
-    echo "${WORKINGDIR}/ami_builder_${AMI_ARCH}"
+    echo "${WORKINGDIR}/amibuilder_${AMI_ARCH}"
 }
 
 # Return the mount point to use for images
 custom_get_img_mount_point()
 {
-    echo "${WORKINGDIR}/ami_builder_${AMI_ARCH}.mnt"
+    echo "${WORKINGDIR}/amibuilder_${AMI_ARCH}.mnt"
 }
 
 # customise the chroot install before creating an image
@@ -94,7 +94,7 @@ EOF
 # Return a filename for the AMI image
 custom_get_ami_img_name()
 {
-    echo "${WORKINGDIR}/ami_builder_${AMI_ARCH}.ami.img"
+    echo "${WORKINGDIR}/amibuilder_${AMI_ARCH}.ami.img"
 }
 
 # Return a file size for the AMI image
@@ -107,7 +107,7 @@ custom_get_ami_img_size()
 # Return a name for the AMI
 custom_get_ami_name()
 {
-    echo "ami_builder_${AMI_ARCH}.$(date +%Y%m%d)"
+    echo "amibuilder_${AMI_ARCH}.$(date +%Y%m%d)"
 }
 
 # Return a description for the AMI
@@ -119,7 +119,7 @@ custom_get_ami_description()
 # Return a filename for the KVM image
 custom_get_kvm_img_name()
 {
-    echo "${WORKINGDIR}/ami_builder_${AMI_ARCH}.kvm.img"
+    echo "${WORKINGDIR}/amibuilder_${AMI_ARCH}.kvm.img"
 }
 
 # Return a file size for the KVM image
