@@ -190,7 +190,7 @@ send_email()
     [ -s /etc/default/ami_sysv ] && . /etc/default/ami_sysv
     [ -s /etc/sysconfig/ami_sysv ] && . /etc/sysconfig/ami_sysv
     local owner=${AMI_OWNER:-${DEFAULT_AMI_OWNER}}
-    [ -n "${AMI_NO_EMAIL}" -a -n "${owner}" ] && \
+    [ -z "${AMI_NO_EMAIL}" -a -n "${owner}" ] && \
 	mail -s "AWS $(hostname -s): $1" ${AMI_CC_LIST:+-c ${AMI_CC_LIST}} ${owner}
 }
 
@@ -209,6 +209,7 @@ Full details of the instance are shown below.
   security groups: $(get_meta_data security-groups)
   AWS local network: $(get_meta_data local-hostname) [$(get_meta_data local-ipv4)]
 EOF
+    return 0
 }
 
 # Handle shutdown; nothing to do
