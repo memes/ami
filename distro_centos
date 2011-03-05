@@ -8,8 +8,8 @@ MIRROR_URL=${MIRROR_URL:-"http://mirror.centos.org/centos/${CENTOS_VER}"}
 WORKINGDIR=${WORKINGDIR:-"$(pwd)"}
 MOUNTDIR=${MOUNTDIR:-"$(pwd)/centos_${CENTOS_VER}_${AMI_ARCH}.mnt"}
 ROOT_PKGS=${ROOT_PKGS:-"yum-utils"}
-BASE_PKGS=${BASE_PKGS:-"passwd vim-minimal sudo openssh-server man shadow-utils authconfig dhclient postfix which mailx wget ddclient"}
-EXTRA_PKGS="${EXTRA_PKGS} git s3cmd"
+BASE_PKGS=${BASE_PKGS:-"passwd vim-minimal sudo openssh-server man shadow-utils authconfig dhclient postfix which mailx wget"}
+EXTRA_PKGS="${EXTRA_PKGS} git s3cmd ddclient"
 
 # Return the directory to use for base install
 distro_get_base_directory()
@@ -212,9 +212,10 @@ chkconfig --level 2345 rsyslog on
 chkconfig --level 2345 network on
 chkconfig --level 2345 postfix on
 # Don't need the runtime management of network and services
-chkconfig --level 2345 NetworkManager off
-chkconfig --level 2345 avahi-daemon off
-chkconfig --level 2345 firstboot off
+chkconfig --del NetworkManager
+chkconfig --del avahi-daemon
+chkconfig --del firstboot
+chkconfig --del ddclient
 
 # Change root password to consistent value across instances, but
 # remote login is permitted only by public SSH key
