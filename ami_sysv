@@ -16,7 +16,6 @@
 ### END INIT INFO
 
 PATH=/usr/bin:/bin:/usr/sbin:/sbin
-DEFAULT_AMI_OWNER="memes@matthewemes.com"
 
 # Retrieve meta-data variable and echo to stdout
 get_meta_data()
@@ -101,7 +100,8 @@ update_owner()
 {
     local owner=
     [ $# -ge 1 ] && owner="$1"
-    [ -z "${owner}" ] && owner=${AMI_OWNER:-${DEFAULT_AMI_OWNER}}
+    [ -z "${owner}" ] && owner="${AMI_OWNER}"
+    [ -z "${owner}" ] && return 0
     local rcfile=
     [ -s /etc/debian_version ] && rcfile=/etc/default/ami_sysv
     [ -s /etc/redhat-release ] && rcfile=/etc/sysconfig/ami_sysv
@@ -189,7 +189,7 @@ send_email()
     # Try to be distro independent
     [ -s /etc/default/ami_sysv ] && . /etc/default/ami_sysv
     [ -s /etc/sysconfig/ami_sysv ] && . /etc/sysconfig/ami_sysv
-    local owner=${AMI_OWNER:-${DEFAULT_AMI_OWNER}}
+    local owner="${AMI_OWNER}"
     [ -z "${AMI_NO_EMAIL}" -a -n "${owner}" ] && \
 	mail -s "AWS $(hostname -s): $1" ${AMI_CC_LIST:+-c ${AMI_CC_LIST}} ${owner}
 }
