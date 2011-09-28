@@ -50,13 +50,15 @@ dont_be_stupid()
     local sanity_check=$(echo "${path}" | tr -cd '[:alnum:]/._' 2>/dev/null)
     [ "${sanity_check}" = "${path}" ] || \
         error "dont_be_stupid: path ${path} contains disallowed characters"
-    local canonical=$(readlink -f "${path}")
+    local canonical=$(readlink -f "${path}" 2>/dev/null)
+    [ -z "${canonical}" ] && \
+	error "dont_be_stupid: canonical path is empty"
     [ "/" = "${canonical}" ] && \
         error "dont_be_stupid: not allowed to do anything in root"
     [ -d "${canonical}" ] || canonical=$(dirname "${canonical}")
     [ -d "${canonical}" ] || \
         error "dont_be_stupid: parent directory of ${path} does not exist"
-    [ "/" = "${directory}" ] && \
+    [ "/" = "${canonical}" ] && \
         error "dont_be_stupid: not allowed to do anything in root"
     local base_working_dir=$(readlink -f ${AMI_WORKING_DIR:-${DEFAULT_MINIMAL_WORKING_DIR}} 2>/dev/null)
     echo "${canonical}" | grep -q "^${base_working_dir}" >/dev/null 2>/dev/null
@@ -88,7 +90,7 @@ get_mountpoint()
     [ $# -ge 1 ] && file="$1"
     [ -z "${file}" ] && warn "get_mountpoint: \$file is empty"
     [ -z "${file}" ] && return
-    file=$(readlink -f "${file}")
+    file=$(readlink -f "${file}" 2>/dev/null)
     [ -e "${file}" ] || warn "get_mountpoint: ${file} is not a valid"
     [ -e "${file}" ] || return
     local dev=
@@ -384,7 +386,7 @@ post_base()
     ${SUDO} sh -c "cat > ${base}/etc/ami_builder" <<EOF
 AMI instance built on host $(hostname --fqdn)  at $(date '+%H:%M %Z on %m/%d/%y')
   Invocation parameters: $(cat /proc/$$/cmdline | tr '\0' ' ')
-  Working directory: $(readlink -f /proc/$$/cwd)
+  Working directory: $(readlink -f /proc/$$/cwd 2>/dev/null)
 EOF
     flavour_stage post_base "${base}"
     distro_stage post_base "${base}"

@@ -15,8 +15,8 @@ SUDO=${SUDO:-$(which sudo)}
 
 # Try to get a sane working directory from the user or environment, fallback to 
 # ~/tmp
-WORKINGDIR=${WORKINGDIR:-"$(readlink -e ${TMPDIR:-$TMP})"}
-[ -z "${WORKINGDIR}" ] && WORKINGDIR="$(readlink -e ~/tmp)"
+WORKINGDIR=${WORKINGDIR:-"$(readlink -e ${TMPDIR:-$TMP} 2>/dev/null)"}
+[ -z "${WORKINGDIR}" ] && WORKINGDIR="$(readlink -e ~/tmp 2>/dev/null)"
 
 # Use a random password for memes account; public key SSH only
 MEMES_PASSWORD=${MEMES_PASSWORD:-$(dd if=/dev/urandom bs=1 count=8 2>/dev/null | base64)}
