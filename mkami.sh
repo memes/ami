@@ -13,6 +13,11 @@ DEFAULT_FLAVOUR=${DEFAULT_FLAVOUR:-"s3"}
 DEFAULT_IMG_SIZE=${DEFAULT_IMG_SIZE:-$((1024 * 1024 * 1024))}
 SUDO=${SUDO:-$(which sudo)}
 
+# Try to get a sane working directory from the user or environment, fallback to 
+# ~/tmp
+WORKINGDIR=${WORKINGDIR:-"$(readlink -e ${TMPDIR:-$TMP})"}
+[ -z "${WORKINGDIR}" ] && WORKINGDIR="$(readlink -e ~/tmp)"
+
 # Use a random password for memes account; public key SSH only
 MEMES_PASSWORD=${MEMES_PASSWORD:-$(dd if=/dev/urandom bs=1 count=8 2>/dev/null | base64)}
 

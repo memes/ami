@@ -5,8 +5,7 @@
 
 CENTOS_VER=${CENTOS_VER:-5.5}
 MIRROR_URL=${MIRROR_URL:-"http://mirror.centos.org/centos/${CENTOS_VER}"}
-WORKINGDIR=${WORKINGDIR:-"$(pwd)"}
-MOUNTDIR=${MOUNTDIR:-"$(pwd)/centos_${CENTOS_VER}_${AMI_ARCH}.mnt"}
+MOUNTDIR=${MOUNTDIR:-"${WORKINGDIR}/centos_${CENTOS_VER}_${AMI_ARCH}.mnt"}
 ROOT_PKGS=${ROOT_PKGS:-"yum-utils"}
 BASE_PKGS=${BASE_PKGS:-"passwd vim-minimal sudo openssh-server man shadow-utils authconfig dhclient postfix which mailx wget"}
 EXTRA_PKGS="${EXTRA_PKGS} git s3cmd ddclient"

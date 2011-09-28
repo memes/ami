@@ -311,6 +311,10 @@ prebuild_validate()
         error "prebuild_validate: AMI architecture must be i386 or x86_64: ${AMI_ARCH} is invalid"
     [ "x86_64" = "${AMI_ARCH}" -a "x86_64" != "$(uname -m)" ] && \
         error "prebuild_validate: cannot build ${AMI_ARCH} install on $(uname -m) host"
+    [ -z "${WORKINGDIR}" ] && \
+	error "prebuild_validate: working directory must be specified in \$WORKINGDIR"
+    [ -d "${WORKINGDIR}" -a -w "${WORKINGDIR}" ] || \
+	error "prebuild_validate: working directory $WORKINGDIR is invalid"
 }
 
 # Prepare the base before the chroot happens; just a place-holder for distro and
