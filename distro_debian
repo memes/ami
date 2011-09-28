@@ -6,7 +6,7 @@
 [ "x86_64" = "${AMI_ARCH}" ] && DEBIAN_ARCH="amd64"
 [ -z "${DEBIAN_ARCH}" ] && DEBIAN_ARCH="${AMI_ARCH}"
 
-DEBIAN_VER=${DEBIAN_VER:-lenny}
+DEBIAN_VER=${DEBIAN_VER:-squeeze}
 MIRROR_URL=${MIRROR_URL:-"http://ftp.debian.org"}
 MOUNTDIR=${MOUNTDIR:-"${WORKINGDIR}/debian_${DEBIAN_VER}_${DEBIAN_ARCH}.mnt"}
 ROOT_PKGS=${ROOT_PKGS:-"locales less bzip2 debconf-utils sudo"}
