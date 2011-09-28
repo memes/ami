@@ -282,6 +282,9 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y linux-image-${kernel_flavour}
 update-rc.d -f ami_sysv remove
 EOF
 
+    ${SUDO} rm -f ${base}/etc/udev/rules.d/70-persistent-net.rules \
+	${base}/etc/udev/rules.d/.70-persistent-cd.rules \
+	${base}/etc/udev/rules.d/.*.swp
     ${SUDO} umount "${base}/sys" || \
         error "distro_post_kvm_image: unable to umount ${base}/sys"
     ${SUDO} umount "${base}/proc" || \
