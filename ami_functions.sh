@@ -818,7 +818,7 @@ bundle_ami()
     [ -s "${img}" ] || error "bundle_ami: image file ${img} is invalid"
     dont_be_stupid "${img_tmp}"
     local block_mappings="--block-device-mapping ami=sda1,root=/dev/sda1"
-    local kernel_id=$(eval "echo \${EC2_DEFAULT_KERNEL_ID_${AMI_ARCH}}")
+    local kernel_id=
     local ramdisk_id=$(eval "echo \${EC2_DEFAULT_RAMDISK_ID_${AMI_ARCH}}")
     [ "i386" = "${AMI_ARCH}" ] && \
         block_mappings="${block_mappings},ephemeral0=sda2,swap=sda3"
@@ -865,8 +865,8 @@ upload_ami()
     local acl=
     [ "public-read" = "${AMI_ACL}" -o "aws-exec-read" = "${AMI_ACL}" ] && \
         acl=${AMI_ACL}
-    local kernel_id=$(eval "echo \${EC2_DEFAULT_KERNEL_ID_${AMI_ARCH}}")
-    local ramdisk_id=$(eval "echo \${EC2_DEFAULT_RAMDISK_ID_${AMI_ARCH}}")
+    local kernel_id=$(get_kernel_id)
+    local ramdisk_id=$(get_ramdisk_id)
     ec2-upload-bundle -b ${bucket} \
         -m "${ami_tmp}/${ami}.manifest.xml" \
         -a ${EC2_ACCESS_KEY} \
@@ -1076,4 +1076,34 @@ do_ami()
     [ -z "${base}" ] && error "do_ami: \$base is unspecified"
     # Only allow flavour to perform this step
     flavour_stage do_ami "${base}"
+}
+
+# Get the best kernel id for an instance
+get_kernel_id()
+{
+    local kernel_id=$(eval "echo \${EC2_DEFAULT_KERNEL_ID_${AMI_ARCH}}")
+    [ -z "${kernel_id}" ] && kernel_id=$(custom_stage get_kernel_id $@)
+    [ -z "${kernel_id}" ] && kernel_id=$(distro_stage get_kernel_id $@)
+    [ -z "${kernel_id}" ] && kernel_id=$(flavour_stage get_kernel_id $@)
+    echo "${kernel_id}"
+}
+
+# Get the best ramdisk id for an instance
+get_ramdisk_id()
+{
+    local ramdisk_id=$(eval "echo \${EC2_DEFAULT_RAMDISK_ID_${AMI_ARCH}}")
+    [ -z "${ramdisk_id}" ] && ramdisk_id=$(custom_stage get_ramdisk_id $@)
+    [ -z "${ramdisk_id}" ] && ramdisk_id=$(distro_stage get_ramdisk_id $@)
+    [ -z "${ramdisk_id}" ] && ramdisk_id=$(flavour_stage get_ramdisk_id $@)
+    echo "${ramdisk_id}"
+}
+
+# Return 0 if all the functions support a bootable system
+support_bootable()
+{
+    if [ -n "$(flavour_stage support_bootable)" -a \
+	-n "$(distro_stage support_bootable)" ]; then
+	return 0
+    fi
+    return 1
 }

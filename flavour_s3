@@ -78,3 +78,9 @@ flavour_do_ami()
 	"${ami_description}"
     return 0
 }
+
+# Return non-empty if this flavour supports a bootable system
+flavour_support_bootable()
+{
+    echo ""
+}

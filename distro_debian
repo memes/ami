@@ -189,6 +189,16 @@ distro_post_chroot()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "distro_post_chroot: \$base is unspecified"
     [ -d "${base}" ] || error "distro_post_chroot: ${base} is invalid"
+    local install_bootloader=$(support_bootable)
+    if [ ${install_bootloader} eq 0 ]; then
+	local kernel_flavour=
+	[ "i386" = "${DEBIAN_ARCH}" ] && kernel_flavour=686
+	[ -z "${kernel_flavour}" ] && kernel_flavour=${DEBIAN_ARCH}
+	# Prepare a boot loader and kernel for the EBS volume
+	${SUDO} chroot "${base}" <<EOF
+DEBIAN_FRONTEND=noninteractive apt-get install -y grub-legacy linux-image-${kernel_flavour}
+EOF
+    fi
     if [ -e "${SCRIPT_DIR}/ami_sysv" ]; then
 	${SUDO} cp "${SCRIPT_DIR}/ami_sysv" "${base}/etc/init.d/ami_sysv"
 	${SUDO} chroot "${base}" <<EOF
@@ -289,4 +299,10 @@ EOF
         error "distro_post_kvm_image: unable to umount ${base}/sys"
     ${SUDO} umount "${base}/proc" || \
         error "distro_post_kvm_image: unable to umount ${base}/proc"
+}
+
+# Return non-empty if this distro supports a bootable system
+distro_support_bootable()
+{
+    echo "true"
 }
