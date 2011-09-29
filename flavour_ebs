@@ -103,7 +103,10 @@ flavour_initialise()
 
     # Attach the volume
     part_dev=${part_dev:-$DEFAULT_EBS_DEV}
-    ec2-attach-volume ${vol_id} --instance ${instance_id} --device ${part_dev} >/dev/null 2>/dev/null
+    # Attach volume requires using /dev/sdX not /dev/xvdX, so adjust as
+    # necessary
+    local att_dev=$(echo ${part_dev} | sed -e 's/xvd/sd/g' 2>/dev/null)
+    ec2-attach-volume ${vol_id} --instance ${instance_id} --device ${att_dev} >/dev/null 2>/dev/null
     vol_status=$(wait_for_vol_status ${vol_id} --filter="attachment.status=attached")
     [ -z "${vol_status}" ] && \
 	error "flavour_initialise: EBS volume cannot be attached"
