@@ -1092,8 +1092,10 @@ get_kernel_id()
 	    kernel_id=$(ec2-describe-images --owner self --owner amazon \
 		--filter "architecture=${AMI_ARCH}" \
 		--filter "image-type=kernel" \
-		--filter "manifest-location=*pv-grub-hd-0_1*" \
+		--filter "manifest-location=*pv-grub-hd0_1*" \
 		${AMI_LOCATION:+--region "${AMI_LOCATION}"} | cut -f2)
+	    [ -z "${kernel_id}" ] && \
+		error "get_kernel_id: system is expecting a pvgrub kernel, but none found"
 	fi
     fi
     echo "${kernel_id}"
