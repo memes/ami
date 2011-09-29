@@ -1111,7 +1111,7 @@ get_ramdisk_id()
     echo "${ramdisk_id}"
 }
 
-# Return 0 if all the functions support pvgrup
+# Return 0 if all the functions support pvgrub
 support_pvgrub()
 {
     if [ -n "$(flavour_stage support_pvgrub)" -a \
