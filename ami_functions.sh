@@ -484,11 +484,15 @@ none            /dev/shm        tmpfs       defaults                0        0
 EOF
     fi
 
+    # If the kernel is pvgrub then the block devices must be /dev/xvdX instead
+    # of /dev/sdX
+    local blockdev=/dev/sd
+    support_pvgrub && blockdev=/dev/xvd
     if [ "i386" = "${AMI_ARCH}" ]; then
         ${SUDO} sh -c "cat >> \"${base}/etc/fstab\"" <<EOF
 # 32 bit (m1.small and c1.medium instances)
-/dev/sda2       /mnt            ext3        defaults,noauto         0        0
-/dev/sda3       swap            swap        defaults                0        0
+${blockdev}a2       /mnt            ext3        defaults,noauto         0        0
+${blockdev}a3       swap            swap        defaults                0        0
 EOF
     fi
 
@@ -496,8 +500,8 @@ EOF
         ${SUDO} sh -c "cat >> \"${base}/etc/fstab\"" <<EOF
 # 64 bit (m1.large, m1.xlarge, c1.xlarge, cc1.4xlarge, cg1.4xlarge,
 # m2.xlarge, m2.2xlarge, and m2.4xlarge instances)
-/dev/sdb        /mnt            ext3        defaults,noauto         0        0
-/dev/sdc        /mnt            ext3        defaults,noauto         0        0
+${blockdev}b        /mnt            ext3        defaults,noauto         0        0
+${blockdev}c        /mnt            ext3        defaults,noauto         0        0
 EOF
     fi
     flavour_stage update_fstab "${base}"
@@ -769,7 +773,7 @@ mk_pvgrub_entry()
 
 title Linux ${version}
     root (hd0)
-    kernel /boot/$(basename "${vmlinuz}") root=/dev/sda1
+    kernel /boot/$(basename "${vmlinuz}") root=/dev/xvda1
 EOF
     if [ -n "${initrd}" ]; then
         ${SUDO} sh -c "cat >> \"${cfg}\"" <<EOF
