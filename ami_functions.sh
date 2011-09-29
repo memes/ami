@@ -701,7 +701,8 @@ mk_bootable()
     mk_grub_cfg "${base}"
 }
 
-# Generate a grub configuration for installation at $1
+# Generate a grub configuration for installation at $1. If $2 is not null
+# create a pvgrub menu
 mk_grub_cfg()
 {
     local base=
@@ -709,10 +710,19 @@ mk_grub_cfg()
     [ -z "${base}" ] && error "mk_grub_cfg: base directory is unspecified"
     dont_be_stupid "${base}"
     [ -d "${base}" ] || error "mk_grub_cfg: ${base} directory is invalid"
-    ${SUDO} sh -c "cat > \"${base}/boot/grub/grub.cfg\"" <<EOF
-set default=0
-set timeout=10
-EOF
+    [ -d "${base}/boot/grub" ] || ${SUDO} mkdir -p "${base}/boot/grub"
+    local pvgrub=
+    [ $# -ge 2 ] && pvgrub="$2"
+    local cfg=
+    if [ -n "$pvgrub" ]; then
+	cfg="${base}/boot/grub/menu.lst"
+	mk_pvgrub_header "${cfg}"
+    else
+	cfg="${base}/boot/grub/grub.cfg"
+	[ -e "${base}/boot/grub/menu.lst" ] \
+	    && ${SUDO} rm -f "${base}/boot/grub/menu.lst"
+	mk_grub_header "${cfg}"
+    fi
     local vmlinuz=
     local version=
     local initrd=
@@ -721,25 +731,90 @@ EOF
         version=$(echo "${vmlinuz}" | sed -e's/vmlinuz-//g')
         initrd=$(find "${base}/boot/" -iname "initrd*${version}*" | grep -v '.bak$')
         if [ -n "${vmlinuz}" ]; then
-            ${SUDO} sh -c "cat >> \"${base}/boot/grub/grub.cfg\"" <<EOF
-
-menuentry 'Linux${version}' {
-    set root=(hd0,msdos1)
-    linux /boot/${vmlinuz} root=LABEL=root
-EOF
-            if [ -n "${initrd}" ]; then
-                ${SUDO} sh -c "cat >> \"${base}/boot/grub/grub.cfg\"" <<EOF
-    initrd /boot/$(basename "${initrd}")
-EOF
-            fi
-            ${SUDO} sh -c "cat >> \"${base}/boot/grub/grub.cfg\"" <<EOF
-}
-EOF
+	    [ -n "${pvgrub}" ] && \
+		mk_pvgrub_entry "${cfg}" "${vmlinuz}" "${initrd}"
+	    [ -z "${pvgrub}" ] && \
+		mk_grub_entry "${cfg}" "${vmlinuz}" "${initrd}"
         fi
     done
     flavour_stage mk_grub_cfg "${base}"
     distro_stage mk_grub_cfg "${base}"
     custom_stage mk_grub_cfg "${base}"
+}
+
+# Create a pvgrub style header
+mk_pvgrub_header()
+{
+    local cfg=
+    [ $# -ge 1 ] && cfg="$1"
+    [ -z "${cfg}" ] && error "mk_pvgrub_header: \$cfg is unspecified"
+    ${SUDO} sh -c "cat > \"${cfg}\"" <<EOF
+default 0
+timeout 1
+EOF
+}
+
+# Add a pvgrub style entry
+mk_pvgrub_entry()
+{
+    local cfg=
+    [ $# -ge 1 ] && cfg="$1"
+    [ -z "${cfg}" ] && error "mk_pvgrub_entry: \$cfg is unspecified"
+    local vmlinuz=
+    [ $# -ge 2 ] && vmlinuz="$2"
+    [ -z "${vmlinuz}" ] && error "mk_pvgrub_entry: \$vmlinuz is unspecified"
+    local initrd=
+    [ $# -ge 3 ] && initrd="$3"
+    ${SUDO} sh -c "cat >> \"${cfg}\"" <<EOF
+
+title Linux ${version}
+    root (hd0)
+    kernel /boot/$(basename "${vmlinuz}") root=/dev/sda1
+EOF
+    if [ -n "${initrd}" ]; then
+        ${SUDO} sh -c "cat >> \"${cfg}\"" <<EOF
+    initrd /boot/$(basename "${initrd}")
+EOF
+    fi
+}
+
+# Create a new grub style header
+mk_grub_header()
+{
+    local cfg=
+    [ $# -ge 1 ] && cfg="$1"
+    [ -z "${cfg}" ] && error "mk_grub2_header: \$cfg is unspecified"
+    ${SUDO} sh -c "cat > \"${cfg}\"" <<EOF
+set default=0
+set timeout=10
+EOF
+}
+
+# Add a new grub style entry
+mk_grub_entry()
+{
+    local cfg=
+    [ $# -ge 1 ] && cfg="$1"
+    [ -z "${cfg}" ] && error "mk_grub_entry: \$cfg is unspecified"
+    local vmlinuz=
+    [ $# -ge 2 ] && vmlinuz="$2"
+    [ -z "${vmlinuz}" ] && error "mk_grub_entry: \$vmlinuz is unspecified"
+    local initrd=
+    [ $# -ge 3 ] && initrd="$3"
+    ${SUDO} sh -c "cat >> \"${cfg}\"" <<EOF
+
+menuentry 'Linux ${version}' {
+    set root=(hd0,msdos1)
+    linux /boot/$(basename "${vmlinuz}") root=LABEL=root
+EOF
+    if [ -n "${initrd}" ]; then
+        ${SUDO} sh -c "cat >> \"${cfg}\"" <<EOF
+    initrd /boot/$(basename "${initrd}")
+EOF
+    fi
+    ${SUDO} sh -c "cat >> \"${cfg}\"" <<EOF
+}
+EOF
 }
 
 # Launch the specified image file $1 in KVM

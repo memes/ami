@@ -195,20 +195,13 @@ distro_post_chroot()
 	# Prepare a boot loader and kernel for the EBS volume
 	${SUDO} chroot "${base}" <<EOF
 DEBIAN_FRONTEND=noninteractive apt-get install -y ${kernel_pkg}
+# Put all linux image packages on hold to prevent breakage on updates
+dpkg --get-selections 'linux-image*' | \
+    sed -e '/\sinstall/ s/install/hold/g' | dpkg --set-selections
 
-# Create an old grub style boot menu
-mkdir -p /boot/grub
-vmlinuz=$(ls -1 /boot/vmlinuz*)
-initrd=$(ls -1 /boot/initrd*)
-cat > /boot/grub/menu.lst <<eof
-default 0
-timeout 1
-title Linux
-    root (hd0)
-    kernel ${vmlinuz} root=/dev/sda1
-    initrd ${initrd}
-eof
 EOF
+	# Add a pvgrub entry
+	mk_grub_cfg "${base}" "true"
     fi
     if [ -e "${SCRIPT_DIR}/ami_sysv" ]; then
 	${SUDO} cp "${SCRIPT_DIR}/ami_sysv" "${base}/etc/init.d/ami_sysv"
