@@ -243,6 +243,26 @@ distro_post_chroot()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "distro_prepare_chroot: \$base is unspecified"
     [ -d "${base}" ] || error "distro_prepare_chroot: ${base} is invalid"
+    support_pvgrub
+    if [ $? -eq 0 ]; then
+        # Install a kernel
+        ${SUDO} chroot "${base}" <<EOF
+yum -y ${EXCLUDE} install kernel
+
+# Create an old grub style boot menu
+mkdir -p /boot/grub
+vmlinuz=$(ls -1 /boot/vmlinuz*)
+initrd=$(ls -1 /boot/initrd*)
+cat > /boot/grub/menu.lst <<eof
+default 0
+timeout 1
+title Linux
+    root (hd0)
+    kernel ${vmlinuz} root=/dev/sda1
+    initrd ${initrd}
+eof
+EOF
+    fi
     if [ -e "${SCRIPT_DIR}/ami_sysv" ]; then
 	${SUDO} cp "${SCRIPT_DIR}/ami_sysv" "${base}/etc/init.d/ami_sysv"
 	${SUDO} chroot "${base}" <<EOF
@@ -323,13 +343,26 @@ distro_post_kvm_image()
         error "distro_post_kvm_image: unable to rebind /proc to ${base}/proc"
     ${SUDO} mount --bind /sys "${base}/sys" || \
         error "distro_post_kvm_image: unable to rebind /sys to ${base}/sys"
-    # Install a kernel for testing and disable ami_sysv
-    ${SUDO} chroot "${base}" <<EOF
+    support_pvgrub
+    if [ $? -ne 0 ]; then
+        # Install a kernel for testing
+        ${SUDO} chroot "${base}" <<EOF
 yum -y ${EXCLUDE} install kernel
+EOF
+    fi
+    # Disable ami
+    ${SUDO} chroot "${base}" <<EOF
 chkconfig --del ami_sysv
 EOF
     ${SUDO} umount "${base}/sys" || \
         error "distro_post_kvm_image: unable to umount ${base}/sys"
     ${SUDO} umount "${base}/proc" || \
         error "distro_post_kvm_image: unable to umount ${base}/proc"
+}
+
+# Return non-empty if this distro supports pvgrub
+distro_support_pvgrub()
+{
+    # Return empty until had time to test
+    echo ""
 }

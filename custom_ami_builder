@@ -11,6 +11,7 @@ EXTRA_PKGS="screen debootstrap yum"
 
 # Force Debian as the distro
 distro=debian
+[ -z "${DEBIAN_VER}" -o "${DEBIAN_VER}"="lenny" ] && DEBIAN_VER=squeeze
 
 # Return the directory to use for base install
 custom_get_base_directory()

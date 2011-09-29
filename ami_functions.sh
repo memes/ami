@@ -818,8 +818,8 @@ bundle_ami()
     [ -s "${img}" ] || error "bundle_ami: image file ${img} is invalid"
     dont_be_stupid "${img_tmp}"
     local block_mappings="--block-device-mapping ami=sda1,root=/dev/sda1"
-    local kernel_id=
-    local ramdisk_id=$(eval "echo \${EC2_DEFAULT_RAMDISK_ID_${AMI_ARCH}}")
+    local kernel_id=$(get_kernel_id)
+    local ramdisk_id=$(get_ramdisk_id)
     [ "i386" = "${AMI_ARCH}" ] && \
         block_mappings="${block_mappings},ephemeral0=sda2,swap=sda3"
     [ "x86_64" = "${AMI_ARCH}" ] && \
@@ -1085,6 +1085,17 @@ get_kernel_id()
     [ -z "${kernel_id}" ] && kernel_id=$(custom_stage get_kernel_id $@)
     [ -z "${kernel_id}" ] && kernel_id=$(distro_stage get_kernel_id $@)
     [ -z "${kernel_id}" ] && kernel_id=$(flavour_stage get_kernel_id $@)
+    if [ -z "${kernel_id}" ]; then
+	support_pvgrub
+	if [ $? eq 0 ]; then
+	    # No kernel_id specified, so try to find best matching pvgrub
+	    kernel_id=$(ec2-describe-images --owner self --owner amazon \
+		--filter "architecture=${AMI_ARCH}" \
+		--filter "image-type=kernel" \
+		--filter "manifest-location=*pv-grub-hd-0_1*" \
+		${AMI_LOCATION:+--region "${AMI_LOCATION}"} | cut -f2)
+	fi
+    fi
     echo "${kernel_id}"
 }
 
@@ -1098,12 +1109,21 @@ get_ramdisk_id()
     echo "${ramdisk_id}"
 }
 
-# Return 0 if all the functions support a bootable system
-support_bootable()
+# Return 0 if all the functions support pvgrup
+support_pvgrub()
 {
-    if [ -n "$(flavour_stage support_bootable)" -a \
-	-n "$(distro_stage support_bootable)" ]; then
+    if [ -n "$(flavour_stage support_pvgrub)" -a \
+	-n "$(distro_stage support_pvgrub)" ]; then
 	return 0
     fi
     return 1
+}
+
+# Return a kernel package
+get_kernel_pkg()
+{
+    local kernel_pkg=$(custom_stage get_kernel_pkg)
+    [ -z "${kernel_pkg}" ] && kernel_pkg=$(distro_stage get_kernel_pkg)
+    [ -z "${kernel_pkg}" ] && kernel_pkg=$(flavour_stage get_kernel_pkg)
+    echo "${kernel_pkg}"
 }

@@ -6,7 +6,7 @@
 [ "x86_64" = "${AMI_ARCH}" ] && DEBIAN_ARCH="amd64"
 [ -z "${DEBIAN_ARCH}" ] && DEBIAN_ARCH="${AMI_ARCH}"
 
-DEBIAN_VER=${DEBIAN_VER:-stable}
+DEBIAN_VER=${DEBIAN_VER:-lenny}
 MIRROR_URL=${MIRROR_URL:-"http://ftp.debian.org"}
 MOUNTDIR=${MOUNTDIR:-"${WORKINGDIR}/debian_${DEBIAN_VER}_${DEBIAN_ARCH}.mnt"}
 ROOT_PKGS=${ROOT_PKGS:-"locales less bzip2 debconf-utils sudo"}
@@ -189,14 +189,25 @@ distro_post_chroot()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "distro_post_chroot: \$base is unspecified"
     [ -d "${base}" ] || error "distro_post_chroot: ${base} is invalid"
-    local install_bootloader=$(support_bootable)
-    if [ ${install_bootloader} eq 0 ]; then
-	local kernel_flavour=
-	[ "i386" = "${DEBIAN_ARCH}" ] && kernel_flavour=686
-	[ -z "${kernel_flavour}" ] && kernel_flavour=${DEBIAN_ARCH}
+    local kernel_pkg=$(get_kernel_pkg)
+    support_pvgrub
+    if [ $? -eq 0 -a -n "${kernel_pkg}" ]; then
 	# Prepare a boot loader and kernel for the EBS volume
 	${SUDO} chroot "${base}" <<EOF
-DEBIAN_FRONTEND=noninteractive apt-get install -y grub-legacy linux-image-${kernel_flavour}
+DEBIAN_FRONTEND=noninteractive apt-get install -y ${kernel_pkg}
+
+# Create an old grub style boot menu
+mkdir -p /boot/grub
+vmlinuz=$(ls -1 /boot/vmlinuz*)
+initrd=$(ls -1 /boot/initrd*)
+cat > /boot/grub/menu.lst <<eof
+default 0
+timeout 1
+title Linux
+    root (hd0)
+    kernel ${vmlinuz} root=/dev/sda1
+    initrd ${initrd}
+eof
 EOF
     fi
     if [ -e "${SCRIPT_DIR}/ami_sysv" ]; then
@@ -276,10 +287,10 @@ distro_post_kvm_image()
         error "distro_post_kvm_image: unable to rebind /proc to ${base}/proc"
     ${SUDO} mount --bind /sys "${base}/sys" || \
         error "distro_post_kvm_image: unable to rebind /sys to ${base}/sys"
-    local kernel_flavour=
-    [ "i386" = "${DEBIAN_ARCH}" ] && kernel_flavour=686
-    [ -z "${kernel_flavour}" ] && kernel_flavour=${DEBIAN_ARCH}
-    ${SUDO} chroot "${base}" <<EOF
+    local kernel_pkg=$(kernel_pkg)
+    support_pvgrub
+    if [ $? -ne 0 -a -n "${kernel_pkg}" ]; then
+	${SUDO} chroot "${base}" <<EOF
 cat > /etc/kernel-img.conf <<eof
 do_symlinks = no
 relative_links = yes
@@ -288,7 +299,10 @@ do_bootfloppy = no
 do_initrd = yes
 link_in_boot = no
 eof
-DEBIAN_FRONTEND=noninteractive apt-get install -y linux-image-${kernel_flavour}
+DEBIAN_FRONTEND=noninteractive apt-get install -y ${kernel_pkg}
+EOF
+    fi
+    ${SUDO} chroot "${base}" <<EOF
 update-rc.d -f ami_sysv remove
 EOF
 
@@ -301,8 +315,27 @@ EOF
         error "distro_post_kvm_image: unable to umount ${base}/proc"
 }
 
-# Return non-empty if this distro supports a bootable system
-distro_support_bootable()
+# Return non-empty if this distro supports pvgrub
+distro_support_pvgrub()
 {
     echo "true"
+}
+
+# Return a kernel package suitable for current system
+distro_get_kernel_pkg()
+{
+    local kernel_flavour=
+    local kernel_pkg=
+    [ "i386" = "${DEBIAN_ARCH}" ] && kernel_flavour=686
+    [ -z "${kernel_flavour}" ] && kernel_flavour=${DEBIAN_ARCH}
+    case "${DEBIAN_VER}" in
+	stable|lenny)
+	    kernel_pkg="linux-image-2.6-xen-${kernel_flavour}"
+	    ;;
+	*)
+	    kernel_pkg="linux-image-${kernel_flavour}"
+	    [ "${kernel_flavour}" = "686" ] && kernel_pkg="${kernel_pkg}-pae"
+	    ;;
+    esac
+    echo "${kernel_pkg}"
 }

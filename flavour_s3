@@ -79,8 +79,8 @@ flavour_do_ami()
     return 0
 }
 
-# Return non-empty if this flavour supports a bootable system
-flavour_support_bootable()
+# Return non-empty if this flavour supports pvgrub
+flavour_support_pvgrub()
 {
-    echo ""
+    echo "true"
 }
