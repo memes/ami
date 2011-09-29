@@ -135,7 +135,10 @@ flavour_post_base()
     local instance_id=$(get_instance_id)
     [ -z "${instance_id}" ] && \
 	error "flavour_post_base: could not determine instance id"
-    local vol_id=$(wait_for_vol_status --filter="attachment.instance-id=${instance_id}" --filter="attachment.device=${part_dev:-$DEFAULT_PART_DEV}" | awk '/ATTACHMENT/ {print $2}' 2>/dev/null)
+    # Attached volumes are using /dev/sdX not /dev/xvdX, so adjust as
+    # necessary
+    local att_dev=$(echo ${part_dev:-$DEFAULT_PART_DEV} | sed -e 's/xvd/sd/g' 2>/dev/null)
+    local vol_id=$(wait_for_vol_status --filter="attachment.instance-id=${instance_id}" --filter="attachment.device=${att_dev}" | awk '/ATTACHMENT/ {print $2}' 2>/dev/null)
     [ -z "${vol_id}" ] && \
 	error "flavour_post_base: could not determine volume id"
     ec2-detach-volume ${vol_id} >/dev/null 2>/dev/null
