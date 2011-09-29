@@ -1087,7 +1087,7 @@ get_kernel_id()
     [ -z "${kernel_id}" ] && kernel_id=$(flavour_stage get_kernel_id $@)
     if [ -z "${kernel_id}" ]; then
 	support_pvgrub
-	if [ $? eq 0 ]; then
+	if [ $? -eq 0 ]; then
 	    # No kernel_id specified, so try to find best matching pvgrub
 	    kernel_id=$(ec2-describe-images --owner self --owner amazon \
 		--filter "architecture=${AMI_ARCH}" \
