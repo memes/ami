@@ -24,7 +24,7 @@ wait_for_vol_status()
     local count=0
     while [ -z "${vol_status}" -a ${count} -lt ${DEFAULT_WAIT_LOOP_COUNT} ]
     do
-	vol_status=$(ec2-describe-volumes $@ 2>/dev/null | awk '/^VOLUME/ {print $6}')
+	vol_status=$(ec2-describe-volumes $@ 2>/dev/null | awk '/^VOLUME/ {print $5}')
 	count=$(($count + 1))
 	sleep $(($count * ${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT}))
     done
