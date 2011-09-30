@@ -24,7 +24,7 @@ wait_for_vol_status()
     local count=0
     while [ -z "${vol_status}" -a ${count} -lt ${DEFAULT_WAIT_LOOP_COUNT} ]
     do
-	vol_status=$(ec2-describe-volumes $@ 2>/dev/null)
+	vol_status=$(ec2-describe-volumes ${AMI_LOCATION:+--region "${AMI_LOCATION}"} $@ 2>/dev/null)
 	[ -n "${vol_status}" ] && break;
 	count=$(($count + 1))
 	sleep $(($count * ${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT}))
@@ -42,7 +42,7 @@ wait_for_snapshot_status()
     local count=0
     while [ -z "${snapshot_status}" -a ${count} -lt ${DEFAULT_WAIT_LOOP_COUNT} ]
     do
-	snapshot_status=$(ec2-describe-snapshots $@ 2>/dev/null)
+	snapshot_status=$(ec2-describe-snapshots ${AMI_LOCATION:+--region "${AMI_LOCATION}"} $@ 2>/dev/null)
 	[ -n "${snapshot_status}" ] && break;
 	count=$(($count + 1))
 	sleep $(($count * ${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT}))
@@ -94,7 +94,7 @@ flavour_initialise()
     # Create a volume to be used
     local ebs_size=$(get_ebs_size)
     [ -z "${ebs_size}" ] && error "flavour_initialise: EBS size is unspecified"
-    local vol_id=$(ec2-create-volume --size ${ebs_size} --availability-zone ${zone} 2>/dev/null | awk '/^VOLUME/ {print $2}')
+    local vol_id=$(ec2-create-volume --size ${ebs_size} ${AMI_LOCATION:+--region "${AMI_LOCATION}"} 2>/dev/null | awk '/^VOLUME/ {print $2}')
     [ -z "${vol_id}" ] && \
 	error "flavour_initialise: EBS volume was not created"
 
@@ -108,7 +108,7 @@ flavour_initialise()
     # Attach volume requires using /dev/sdX not /dev/xvdX, so adjust as
     # necessary
     local att_dev=$(echo ${part_dev} | sed -e 's/xvd/sd/g' 2>/dev/null)
-    ec2-attach-volume ${vol_id} --instance ${instance_id} --device ${att_dev} >/dev/null 2>/dev/null
+    ec2-attach-volume ${vol_id} ${AMI_LOCATION:+--region "${AMI_LOCATION}"} --instance ${instance_id} --device ${att_dev} >/dev/null 2>/dev/null
     vol_status="$(wait_for_vol_status ${vol_id} --filter="attachment.status=attached")"
     [ -z "${vol_status}" ] && \
 	error "flavour_initialise: EBS volume cannot be attached"
@@ -143,7 +143,7 @@ flavour_post_base()
     local vol_id="$(wait_for_vol_status --filter="attachment.instance-id=${instance_id}" --filter="attachment.device=${att_dev}" | awk '/ATTACHMENT/ {print $2}' 2>/dev/null)"
     [ -z "${vol_id}" ] && \
 	error "flavour_post_base: could not determine volume id"
-    ec2-detach-volume ${vol_id} >/dev/null 2>/dev/null
+    ec2-detach-volume ${vol_id} ${AMI_LOCATION:+--region "${AMI_LOCATION}"} >/dev/null 2>/dev/null
     local vol_status="$(wait_for_vol_status ${vol_id} --filter="status=available")"
     [ -z "${vol_status}" ] && \
 	error "flavour_post_base: EBS volume did not detach"
@@ -154,7 +154,7 @@ flavour_post_base()
 	error "flavour_post_base: couldn't determine volume size"
 
     # Make a snapshot of the volume for registration
-    local snapshot_id=$(ec2-create-snapshot ${vol_id} --description "Base snapshot for: $(get_ami_description)" 2>/dev/null | awk '/SNAPSHOT/ {print $2}')
+    local snapshot_id=$(ec2-create-snapshot ${vol_id} ${AMI_LOCATION:+--region "${AMI_LOCATION}"} --description "Base snapshot for: $(get_ami_description)" 2>/dev/null | awk '/SNAPSHOT/ {print $2}')
     [ -z "${snapshot_id}" ] && \
 	error "flavour_post_base: could not determine snapshot id"
     local snapshot_status="$(wait_for_snapshot_status ${snapshot_id} --filter="status=completed")"
@@ -176,7 +176,7 @@ flavour_post_base()
 	${kernel_id:+--kernel "${kernel_id}"} \
         ${ramdisk_id:+--ramdisk "${ramdisk_id}"} \
 	--root-device-name /dev/sda1 \
-	${block_mappings}
+	${AMI_LOCATION:+--region "${AMI_LOCATION}"} ${block_mappings}
 }
 
 # Return non-empty if this flavour supports pvgrub
