@@ -94,7 +94,7 @@ flavour_initialise()
     # Create a volume to be used
     local ebs_size=$(get_ebs_size)
     [ -z "${ebs_size}" ] && error "flavour_initialise: EBS size is unspecified"
-    local vol_id=$(ec2-create-volume --size ${ebs_size} ${AMI_LOCATION:+--region "${AMI_LOCATION}"} 2>/dev/null | awk '/^VOLUME/ {print $2}')
+    local vol_id=$(ec2-create-volume --size ${ebs_size} ${AMI_LOCATION:+--region "${AMI_LOCATION}"} --availability-zone "${AMI_ZONE:-$zone}" 2>/dev/null | awk '/^VOLUME/ {print $2}')
     [ -z "${vol_id}" ] && \
 	error "flavour_initialise: EBS volume was not created"
 
