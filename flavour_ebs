@@ -24,7 +24,7 @@ wait_for_vol_status()
     local count=0
     while [ -z "${vol_status}" -a ${count} -lt ${DEFAULT_WAIT_LOOP_COUNT} ]
     do
-	vol_status=$(ec2-describe-volumes $@ 2>/dev/null | awk '/^VOLUME/ {print $5}')
+	vol_status=$(ec2-describe-volumes $@ 2>/dev/null)
 	count=$(($count + 1))
 	sleep $(($count * ${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT}))
     done
@@ -41,7 +41,7 @@ wait_for_snapshot_status()
     local count=0
     while [ -z "${snapshot_status}" -a ${count} -lt ${DEFAULT_WAIT_LOOP_COUNT} ]
     do
-	snapshot_status=$(ec2-describe-snapshots $@ 2>/dev/null | awk '/^SNAPSHOT/ {print $4}')
+	snapshot_status=$(ec2-describe-snapshots $@ 2>/dev/null)
 	count=$(($count + 1))
 	sleep $(($count * ${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT}))
     done
@@ -97,7 +97,7 @@ flavour_initialise()
 	error "flavour_initialise: EBS volume was not created"
 
     # Wait for the volume to be ready
-    local vol_status=$(wait_for_vol_status ${vol_id} --filter="status=available")
+    local vol_status="$(wait_for_vol_status ${vol_id} --filter="status=available")"
     [ -z "${vol_status}" ] && \
 	error "flavour_initialise: EBS volume is not available"
 
@@ -107,7 +107,7 @@ flavour_initialise()
     # necessary
     local att_dev=$(echo ${part_dev} | sed -e 's/xvd/sd/g' 2>/dev/null)
     ec2-attach-volume ${vol_id} --instance ${instance_id} --device ${att_dev} >/dev/null 2>/dev/null
-    vol_status=$(wait_for_vol_status ${vol_id} --filter="attachment.status=attached")
+    vol_status="$(wait_for_vol_status ${vol_id} --filter="attachment.status=attached")"
     [ -z "${vol_status}" ] && \
 	error "flavour_initialise: EBS volume cannot be attached"
 
@@ -138,16 +138,16 @@ flavour_post_base()
     # Attached volumes are using /dev/sdX not /dev/xvdX, so adjust as
     # necessary
     local att_dev=$(echo ${part_dev:-$DEFAULT_PART_DEV} | sed -e 's/xvd/sd/g' 2>/dev/null)
-    local vol_id=$(wait_for_vol_status --filter="attachment.instance-id=${instance_id}" --filter="attachment.device=${att_dev}" | awk '/ATTACHMENT/ {print $2}' 2>/dev/null)
+    local vol_id="$(wait_for_vol_status --filter="attachment.instance-id=${instance_id}" --filter="attachment.device=${att_dev}" | awk '/ATTACHMENT/ {print $2}' 2>/dev/null)"
     [ -z "${vol_id}" ] && \
 	error "flavour_post_base: could not determine volume id"
     ec2-detach-volume ${vol_id} >/dev/null 2>/dev/null
-    local vol_status=$(wait_for_vol_status ${vol_id} --filter="status=available")
+    local vol_status="$(wait_for_vol_status ${vol_id} --filter="status=available")"
     [ -z "${vol_status}" ] && \
 	error "flavour_post_base: EBS volume did not detach"
 
     # Get the volume size
-    local vol_size=$(wait_for_vol_status ${vol_id} | awk '/^VOLUME/ {print $3}')
+    local vol_size="$(wait_for_vol_status ${vol_id} | awk '/^VOLUME/ {print $3}')"
     [ -z "${vol_size}" ] && \
 	error "flavour_post_base: couldn't determine volume size"
 
@@ -155,7 +155,7 @@ flavour_post_base()
     local snapshot_id=$(ec2-create-snapshot ${vol_id} --description "Base snapshot for: $(get_ami_description)" 2>/dev/null | awk '/SNAPSHOT/ {print $2}')
     [ -z "${snapshot_id}" ] && \
 	error "flavour_post_base: could not determine snapshot id"
-    local snapshot_status=$(wait_for_snapshot_status ${snapshot_id} --filter="status=completed")
+    local snapshot_status="$(wait_for_snapshot_status ${snapshot_id} --filter="status=completed")"
     [ -z "${snapshot_status}" ] && \
 	error "flavour_post_base: EBS snapshot did not complete"
 
