@@ -773,7 +773,7 @@ mk_pvgrub_entry()
 
 title Linux ${version}
     root (hd0)
-    kernel /boot/$(basename "${vmlinuz}") root=/dev/xvda1
+    kernel /boot/$(basename "${vmlinuz}") root=LABEL=root
 EOF
     if [ -n "${initrd}" ]; then
         ${SUDO} sh -c "cat >> \"${cfg}\"" <<EOF
