@@ -7,7 +7,7 @@
 [ -z "${DEBIAN_ARCH}" ] && DEBIAN_ARCH="${AMI_ARCH}"
 
 DEBIAN_VER=${DEBIAN_VER:-lenny}
-MIRROR_URL=${MIRROR_URL:-"http://ftp.debian.org"}
+MIRROR_URL=${MIRROR_URL:-"http://ftp.us.debian.org"}
 MOUNTDIR=${MOUNTDIR:-"${WORKINGDIR}/debian_${DEBIAN_VER}_${DEBIAN_ARCH}.mnt"}
 ROOT_PKGS=${ROOT_PKGS:-"locales less bzip2 debconf-utils sudo"}
 BASE_PKGS=${BASE_PKGS:-"vim openssh-server git-core subversion mercurial s3cmd bsd-mailx ddclient"}
@@ -52,8 +52,13 @@ cd /dev
 /sbin/MAKEDEV mem null zero ram tty console random urandom sda sdb sdc sdf
 cd
 
-# Make sure contrib and non-free sections are included in apt
-sed -i -e's/ main$/ main contrib non-free/g' /etc/apt/sources.list
+# Make sure there are entries for stable, testing and security updates
+cat > /etc/apt/sources.list <<eof
+deb ${MIRROR_URL}/debian stable main contrib non-free
+deb ${MIRROR_URL}/debian testing main contrib non-free
+deb http://security.debian.org stable/updates main contrib non-free
+deb http://security.debian.org testing/updates main contrib non-free
+eof
 
 # Disable daemon startup during chroot population
 echo "exit 101" > /usr/sbin/policy-rc.d
