@@ -539,13 +539,13 @@ add_memes_keys()
     dont_be_stupid "${base}"
     ${SUDO} sh -c "[ -d \"${base}/home/memes/.ssh\" ] || mkdir -p \"${base}/home/memes/.ssh\""
     if [ -d /media/protected/.ssh ]; then
-        for key in /media/protected/.ssh/*pub
+        for key in /media/protected/.ssh/memes@matthewemes.com*pub
         do
             ${SUDO} sh -c "cat ${key} >> \"${base}/home/memes/.ssh/authorized_keys2\""
         done
     else
         [ -d ~/.ssh/ ] && \
-            for key in ~/.ssh/*pub 
+            for key in ~/.ssh/memes@matthewemes.com*pub 
         do
             ${SUDO} sh -c "cat ${key} >> \"${base}/home/memes/.ssh/authorized_keys2\""
         done
