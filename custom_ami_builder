@@ -115,3 +115,27 @@ custom_get_kvm_img_size()
     # 2Gb should be enough
     echo $((1024 * 1024 * 1024 * 10))
 }
+
+# Add all missing public keys to AMI builder instance
+custom_add_memes_keys()
+{
+    # Expect to be passed the base dir in arg 1
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && \
+        error "custom_add_memes_keys: \$base is unspecified"
+    [ -d "${base}" ] || \
+        error "custom_add_memes_keys: ${base} is invalid"
+    local keypath=
+    if [ -d /media/protected/.ssh ]; then
+	keypath="/media/protected/.ssh"
+    else
+	keypath="~/.ssh"
+    fi
+    for key in "${keypath}/*pub"
+    do
+	key="$(basename "${key}")"
+	[ -e "${base}/home/memes/.ssh/${key}" ] || \
+	    ${SUDO} cp "${keypath}/${key}" "${base}/home/memes/.ssh/"
+    done
+}
