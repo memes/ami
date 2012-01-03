@@ -130,7 +130,7 @@ custom_add_memes_keys()
     if [ -d /media/protected/.ssh ]; then
 	keypath="/media/protected/.ssh"
     else
-	keypath="~/.ssh"
+	keypath="/home/memes/.ssh"
     fi
     for key in ${keypath}/*pub
     do
