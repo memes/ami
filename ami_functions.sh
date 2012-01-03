@@ -553,6 +553,12 @@ add_memes_keys()
     flavour_stage add_memes_keys "${base}"
     distro_stage add_memes_keys "${base}"
     custom_stage add_memes_keys "${base}"
+    
+    # Reset permissions on all .ssh files
+    local uid=$(awk -F: '/^memes/ {print $3}' "${base}/etc/passwd")
+    local gid=$(awk -F: '/^memes/ {print $4}' "${base}/etc/passwd")
+    ${SUDO} chown -R ${uid}:${gid} "${base}/home/memes/.ssh"
+    ${SUDO} find "${base}/home/memes/.ssh" -type f -exec chmod 0600 {} \;
 }
 
 # Update inittab configuration at $1
