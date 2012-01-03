@@ -80,7 +80,7 @@ pid=/var/run/ddclient.pid
 use=web, web=checkip.dyndns.org/, web-skip='IP Address'
 protocol=noip, server=dynupdate.no-ip.com, \\\\
 login=matthewemes, password=wgEbI9PN4KFmLyD7 \\\\
-memes.zapto.org
+worldserver.zapto.org
 eof
 cat > /etc/rc.local <<eof
 #!/bin/sh
