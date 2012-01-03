@@ -1,0 +1,2 @@
+$fWelcome to our Minecraft server
+$fThe server will shutdown automatically at $4midnight Pacific time 

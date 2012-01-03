@@ -1,0 +1,142 @@
+# -*- mode: sh; -*-
+# Minecraft customisation file for MEmes AMI builder
+#
+# This file is sourced before building begins and can modify
+# environment variables and provide customisation functions for
+# various stages.
+#
+# Custom functions should be able to use any builder functions
+
+# Force 32 bit instance type
+AMI_ARCH=i386
+
+# Install screen
+EXTRA_PKGS="screen openjdk-6-jdk"
+
+# Force Debian as the distro, and use testing as debian version
+distro=debian
+DEBIAN_VER=testing
+
+# Return the directory to use for base install
+custom_get_base_directory()
+{
+    echo "${WORKINGDIR}/minecraft_${AMI_ARCH}"
+}
+
+# Return the mount point to use for images
+custom_get_img_mount_point()
+{
+    echo "${WORKINGDIR}/minecraft_${AMI_ARCH}.mnt"
+}
+
+# customise the chroot install before creating an image
+custom_post_chroot()
+{
+    # Expect to be passed the base dir in arg 1
+    local base=
+    [ $# -ge 1 ] && base="$1"
+    [ -z "${base}" ] && error "custom_post_chroot: \$base is unspecified"
+    [ -d "${base}" ] || error "custom_post_chroot: ${base} is invalid"
+    [ -e "${SCRIPT_DIR}/minecraft_server" ] && \
+	${SUDO} cp "${SCRIPT_DIR}/minecraft_server" "${base}/etc/init.d/minecraft_server"
+    ${SUDO} chroot "${base}" <<EOF
+# Add a minecraft user to run the server
+useradd -c "Minecraft account" -m -s /bin/bash minecraft
+mkdir -p /home/minecraft/.ssh
+touch /home/minecraft/.ssh/authorized_keys2
+chmod 0700 /home/minecraft/.ssh
+chmod 0600 /home/minecraft/.ssh/authorized_keys2
+chown -R minecraft:minecraft /home/minecraft
+chpasswd <<eof
+minecraft:$(dd if=/dev/urandom bs=1 count=8 2>/dev/null | base64)
+eof
+
+# Add minecraft startup script - taken from Minecraft forums
+# - http://www.minecraftforum.net/topic/121830-multi-world-linux-minecraft-server-control-script/
+if [ -e /etc/init.d/minecraft_server ]; then
+    chmod 07555 /etc/init.d/minecraft_server
+    chown root:root /etc/init.d/minecraft_server
+    update-rc.d minecraft_server defaults
+fi
+
+# Add a cron job to shutdown server at midnight!
+cat > /etc/cron.d/autoshutdown <<eof
+# Minecraft automatic operations
+#  - backup every couple of hours
+#  - shutdown server when midnight comes
+SHELL=/bin/sh
+MAILTO=memes@matthewemes.com
+0 0 * * * root test -x /usr/sbin/shutdown && /usr/sbin/shutdown -h now
+* */2 * * * root test -x /etc/init.d/minecraft_server && /etc/init.d/minecraft_server backup
+eof
+
+# Configure ddclient
+cat > /etc/ddclient.conf <<eof
+# Minecraft server ddclient configuration
+daemon=0
+syslog=yes
+ssl=yes
+pid=/var/run/ddclient.pid
+use=web, web=checkip.dyndns.org/, web-skip='IP Address'
+protocol=noip, server=dynupdate.no-ip.com, \\\\
+login=matthewemes, password=wgEbI9PN4KFmLyD7 \\\\
+memes.zapto.org
+eof
+cat > /etc/rc.local <<eof
+#!/bin/sh
+#
+# Minecraft rc.local
+/usr/sbin/ddclient -daemon=0 -syslog -quiet -force
+exit 0
+eof
+chmod 0755 /etc/rc.local
+EOF
+    # Copy any existing world configurations to the minecraft user folder
+    [ -e "${SCRIPT_DIR}/minecraft/worlds.conf" ] && \
+	${SUDO} cp "${SCRIPT_DIR}/minecraft/worlds.conf" \
+            "${base}/home/minecraft/"
+    [ -e "${SCRIPT_DIR}/minecraft/motd.txt" ] && \
+	${SUDO} cp "${SCRIPT_DIR}/minecraft/motd.txt" \
+            "${base}/home/minecraft/"
+    [ -d "${SCRIPT_DIR}/minecraft/worlds" ] && \
+	${SUDO} cp -a "${SCRIPT_DIR}/minecraft/worlds" "${base}/home/minecraft/"
+    ${SUDO} chroot "${base}" chown -R minecraft:minecraft /home/minecraft
+}
+
+# Return a filename for the AMI image
+custom_get_ami_img_name()
+{
+    echo "${WORKINGDIR}/minecraft_${distro}_${AMI_ARCH}.ami.img"
+}
+
+# Return a file size for the AMI image
+custom_get_ami_img_size()
+{
+    # 10Gb should be enough
+    echo $((1024 * 1024 * 1024 * 10))
+}
+
+# Return a name for the AMI
+custom_get_ami_name()
+{
+    echo "minecraft_${distro}_${AMI_ARCH}.$(date +%Y%m%d)"
+}
+
+# Return a description for the AMI
+custom_get_ami_description()
+{
+    echo "Minecraft ${AMI_ARCH} (${distro}) image build of $(date '+%H:%M %Z %m/%d/%y')"
+}
+
+# Return a filename for the KVM image
+custom_get_kvm_img_name()
+{
+    echo "${WORKINGDIR}/minecraft_${distro}_${AMI_ARCH}.kvm.img"
+}
+
+# Return a file size for the KVM image
+custom_get_kvm_img_size()
+{
+    # 10Gb should be enough
+    echo $((1024 * 1024 * 1024 * 10))
+}
