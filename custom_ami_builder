@@ -132,9 +132,9 @@ custom_add_memes_keys()
     else
 	keypath="~/.ssh"
     fi
-    for key in "${keypath}/*pub"
+    for key in ${keypath}/*pub
     do
-	key="$(basename "${key}")"
+	key=$(basename "${key}")
 	[ -e "${base}/home/memes/.ssh/${key}" ] || \
 	    ${SUDO} cp "${keypath}/${key}" "${base}/home/memes/.ssh/"
     done
