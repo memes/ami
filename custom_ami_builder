@@ -7,7 +7,7 @@
 #
 # Custom functions should be able to use any builder functions
 
-EXTRA_PKGS="screen debootstrap yum"
+EXTRA_PKGS="screen debootstrap yum openjdk-6-jdk"
 
 # Force Debian as the distro
 distro=debian
