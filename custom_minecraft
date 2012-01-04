@@ -59,15 +59,15 @@ if [ -e /etc/init.d/minecraft_server ]; then
     update-rc.d minecraft_server defaults
 fi
 
-# Add a cron job to shutdown server at midnight!
-cat > /etc/cron.d/autoshutdown <<eof
+# Add a cron file to automate minecraft functions!
+cat > /etc/cron.d/minecraft <<eof
 # Minecraft automatic operations
 #  - backup every couple of hours
 #  - shutdown server when midnight comes
 SHELL=/bin/sh
 MAILTO=memes@matthewemes.com
 0 0 * * * root test -x /usr/sbin/shutdown && /usr/sbin/shutdown -h now
-* */2 * * * root test -x /etc/init.d/minecraft_server && /etc/init.d/minecraft_server backup
+13 */2 * * * root test -x /etc/init.d/minecraft_server && /etc/init.d/minecraft_server backup
 eof
 
 # Configure ddclient
