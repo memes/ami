@@ -67,7 +67,7 @@ cat > /etc/cron.d/minecraft <<eof
 SHELL=/bin/sh
 MAILTO=memes@matthewemes.com
 0 0 * * * root test -x /sbin/shutdown && /sbin/shutdown -h now
-13 */2 * * * root test -x /etc/init.d/minecraft_server && /etc/init.d/minecraft_server backup
+13 */2 * * * root test -x /etc/init.d/minecraft_server && /etc/init.d/minecraft_server backup > /dev/null
 eof
 
 # Configure ddclient
