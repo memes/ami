@@ -572,8 +572,17 @@ update_inittab()
         error "update_inittab: ${base}/etc/inittab does not exist"
     ${SUDO} sed -i '/^[2-6]:[2-5]\+:.*getty/ s/^/#/g' "${base}/etc/inittab"
     local test=$(${SUDO} grep -c '^[1-6].*getty' "${base}/etc/inittab" 2>/dev/null)
-    [ "1" = "${test}" ] || \
-        error "update_inittab: ${base}/etc/inittab is not updated"
+    if [ "1" = "${test}" ]; then
+	# Check to see if ttys are configured elsewhere
+	if [ -e "${base}/etc/sysconfig/init" ]; then
+	    ${SUDO} sed -i '/^ACTIVE_CONSOLES/ s/^/#/g' "${base}/etc/sysconfig/init"
+	    test=$(${SUDO} grep -c '^ACTIVE_CONSOLES' "${base}/etc/sysconfig/init" 2>/dev/null)
+	    [ "1" = "${test}" ] && \
+		error "update_inittab: ${base}/etc/sysconfig/init is not updated"
+	else
+            error "update_inittab: ${base}/etc/inittab is not updated"
+	fi
+    fi
     flavour_stage update_inittab "${base}"
     distro_stage update_inittab "${base}"
     custom_stage update_inittab "${base}"

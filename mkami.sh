@@ -43,7 +43,7 @@ usage()
     echo "usage: $0 [-d|--distro distro] [-a|--arch arch] [-c|--customise custom] [-f|--flavour flavour]"
     echo "       where options are:-"
     echo "        -d distro, --distro distro  distribution to install"
-    echo "           debian or centos, defaults to ${DEFAULT_DISTRO}"
+    echo "           centos, debian or oracle, defaults to ${DEFAULT_DISTRO}"
     echo "        -a arch, --arch arch  architecture of AMI"
     echo "           i386 or x86_64, defaults to architecture of current host"
     echo "        -c custom, --customise custom  include customisations in "
@@ -64,7 +64,7 @@ getargs()
 	    -d|--distro)
 		shift
 		distro="$1"
-		[ "debian" = "${distro}" -o "centos" = "${distro}" ] || usage
+		[ "debian" = "${distro}" -o "centos" = "${distro}" -o "oracle" = "${distro}" ] || usage
 		;;
 	    -a|--arch)
 		shift
