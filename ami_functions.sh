@@ -748,7 +748,7 @@ mk_grub_cfg()
     for v in "${base}/boot/vmlinuz*"; do
         vmlinuz=$(basename ${v})
         version=$(echo "${vmlinuz}" | sed -e's/vmlinuz-//g')
-        initrd=$(find "${base}/boot/" -iname "initrd*${version}*" | grep -v '.bak$')
+        initrd=$(find "${base}/boot/" -iname "init*${version}*" | grep -v '.bak$')
         if [ -n "${vmlinuz}" ]; then
 	    [ -n "${pvgrub}" ] && \
 		mk_pvgrub_entry "${cfg}" "${vmlinuz}" "${initrd}"
@@ -850,16 +850,7 @@ launch_img()
     [ -z "${qemu_cpu}" ] && qemu_cpu="qemu32"
     
     # Get a mac address to use
-    for i in $(seq 100); do
-        mac="54:52:00:00:00:$(dd if=/dev/urandom bs=1 count=1 2>/dev/null | od -t x1 | cut -d' ' -f2 | head -n 1)"
-        [ ${#mac} -ne 17 ] && continue;
-        # Not reliable over vde2, so skip and hope there are no collisions
-        #    arping -qc 3 ${mac} >/dev/null 2>/dev/null || break
-        break;
-    done
-    [ "$i" = "100" ] && error "launch_img: couldn't get an unused mac address"
-    [ ${#mac} -ne 17 ] && \
-        error "launch_img: couldn't generate a valid mac address"
+    mac="54:52:00:00:00:`echo "obase=16; $(($$%245+10))" | bc`"
     flavour_stage launch_img "${img}"
     distro_stage launch_img "${img}"
     custom_stage launch_img "${img}"
@@ -870,7 +861,7 @@ launch_img()
         -net nic,vlan=0,model=virtio,macaddr=${mac} \
         -net vde,vlan=0,sock=/var/run/vde2/tap0.ctl,mode=0660 \
         -m 512 -usb -usbdevice tablet \
-        -drive file="${img}",if=ide,index=0,boot=on,media=disk
+        -drive file="${img}",if=ide,index=0,cache=none,media=disk
 }
 
 # Helper to make sure that EC2 environment is setup
