@@ -161,7 +161,7 @@ ldconfig
 # Install the EPEL repo package to get the signing key and access to mercurial, 
 # etc
 rpm -Uvh --nosignature \
-    http://download.fedora.redhat.com/pub/epel/5/${AMI_ARCH}/epel-release-5-4.noarch.rpm
+    http://dl.fedora.redhat.com/pub/epel/5/${AMI_ARCH}/epel-release-5-4.noarch.rpm
 
 # Enable networking
 cat > /etc/sysconfig/network <<eof
