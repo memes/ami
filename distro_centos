@@ -200,6 +200,7 @@ authconfig --enablemd5 --enableshadow --updateall
 
 # Install the extra packages
 [ -n "${EXTRA_PKGS}" ] && yum -y ${EXCLUDE} install ${EXTRA_PKGS}
+[ -n "${GROUP_PKGS}" ] && yum -y ${EXCLUDE} groupinstall ${GROUP_PKGS}
 
 # Configure SELinux for permissive mode, if config file is present
 # This allows future use of SElinux, but doesn't enforce current rules
