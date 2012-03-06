@@ -69,15 +69,15 @@ EOF
 [ol${ORACLE_VER}${ORACLE_UPDATE:+U${ORACLE_UPDATE}}_base]
 name=Oracle Linux ${ORACLE_VER}${ORACLE_UPDATE:+ U${ORACLE_UPDATE}} - ${AMI_ARCH} - base
 baseurl=${MIRROR_URL}/repo/OracleLinux/OL${ORACLE_VER}/${ORACLE_UPDATE:-0}/base/${AMI_ARCH}
-gpgkey=http://${MIRROR_URL}/RPM-GPG-KEY-oracle-ol6
-gpgcheck=0
+gpgkey=${MIRROR_URL}/RPM-GPG-KEY-oracle-ol6
+gpgcheck=1
 enabled=1
 EOF
     # Install minimum set of packages in order to get functional system
     # Note: these will need to be reinstalled within the chroot to resolve
     # host/chroot rpm/yum/db differences
-    ${SUDO} yum -c /tmp/yum.conf -y --installroot="${base}" ${EXCLUDE} \
-        install ${ROOT_PKGS}
+    ${SUDO} yum -c /tmp/yum.conf -y --nogpgcheck --installroot="${base}" \
+	${EXCLUDE} install ${ROOT_PKGS}
     ${SUDO} rm -rf "${base}/root/.rpmdb"
 }
 
@@ -100,10 +100,8 @@ distro_prepare_chroot()
     [ -d "${base}/home/memes" ] && \
 	error "distro_prepare_chroot: ${base}/home/memes still exists"
     ${SUDO} chroot "${base}" <<EOF
-# Recreate required devices
-cd /dev
-/sbin/MAKEDEV -a mem null port zero core full ram tty console random urandom sda sdb sdc sdf
-cd
+# Set path
+export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 
 # prepare for reinstall of packages
 touch /etc/mtab
@@ -115,6 +113,14 @@ rpm --initdb
 # downloaded in the chroot
 yum -y ${EXCLUDE} --nogpgcheck install ${ROOT_PKGS} ${BASE_PKGS}
 yum-complete-transaction -y ${EXCLUDE}
+
+# Recreate required devices if MAKEDEV is present
+if [ -x /sbin/MAKEDEV ]; then
+    cd /dev
+    /sbin/MAKEDEV -a mem null port zero core full ram tty console random urandom sda sdb sdc sdf
+    cd
+fi
+
 find / -xdev -iname "*rpmnew" -exec rm -f {} \;
 
 # Clean up all yum repository information
@@ -186,13 +192,14 @@ eof
 # Configure authentication
 authconfig --enablemd5 --enableshadow --updateall
 
-# Install the extra packages
-[ -n "${EXTRA_PKGS}" ] && yum -y ${EXCLUDE} install ${EXTRA_PKGS}
-
 # Configure SELinux for permissive mode, if config file is present
 # This allows future use of SElinux, but doesn't enforce current rules
 [ -s /etc/selinux/config ] && \
     sed -i '/^SELINUX=/cSELINUX=permissive' /etc/selinux/config
+
+# Install the extra and packages
+[ -n "${EXTRA_PKGS}" ] && yum -y ${EXCLUDE} install ${EXTRA_PKGS}
+[ -n "${GROUP_PKGS}" ] && yum -y ${EXCLUDE} groupinstall ${GROUP_PKGS}
 
 # Make sure rsyslog, networking and email services are enabled
 chkconfig --level 2345 rsyslog on
@@ -341,5 +348,5 @@ EOF
 distro_support_pvgrub()
 {
     # Return empty until had time to test
-    echo ""
+    echo "true"
 }
