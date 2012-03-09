@@ -149,11 +149,13 @@ setenv TZ America/Los_Angeles
 eof
 
 # Disable TLS when running under xen
-cat >> /etc/ld.so.conf.d/xen.conf <<eof
+if [ ${CENTOS_VER} -lt 6 ]; then
+    cat >> /etc/ld.so.conf.d/xen.conf <<eof
 # Disable TLS when the image is running under xen
 hwcap 0 nosegneg
 eof
-ldconfig
+    ldconfig
+fi
 
 # At this point the chroot contains a working minimal set of packages; start to
 # customise the install for EC2
@@ -219,7 +221,7 @@ chkconfig --del ddclient
 
 # Change root password to consistent value across instances, but
 # remote login is permitted only by public SSH key
-echo "${ROOT_PASSWORD}" | passwd --stdin root
+echo '${ROOT_PASSWORD}' | passwd --stdin root
 mkdir -p /root/.ssh
 touch /root/.ssh/authorized_keys2
 chmod 0700 /root/.ssh
@@ -228,7 +230,7 @@ chown -R root:root /root/.ssh
 
 # Add memes with random password
 useradd -c "Matthew Emes" -m -s /bin/bash memes
-echo "${MEMES_PASSWORD}" | passwd --stdin memes
+echo '${MEMES_PASSWORD}' | passwd --stdin memes
 mkdir -p /home/memes/.ssh
 touch /home/memes/.ssh/authorized_keys2
 chmod 0700 /home/memes/.ssh
