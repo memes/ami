@@ -114,17 +114,16 @@ rpm --initdb
 yum -y ${EXCLUDE} --nogpgcheck install ${ROOT_PKGS} ${BASE_PKGS}
 yum-complete-transaction -y ${EXCLUDE}
 
+# Clean up all yum repository information and remove conflict files
+yum -y clean all
+find / -xdev -iname "*rpmnew" -exec rm -f {} \;
+
 # Recreate required devices if MAKEDEV is present
 if [ -x /sbin/MAKEDEV ]; then
     cd /dev
     /sbin/MAKEDEV -a mem null port zero core full ram tty console random urandom sda sdb sdc sdf
     cd
 fi
-
-find / -xdev -iname "*rpmnew" -exec rm -f {} \;
-
-# Clean up all yum repository information
-yum -y clean all
 
 # Set the time and timezone for the instance
 cat >> /etc/sysconfig/clock <<eof
@@ -143,11 +142,13 @@ setenv TZ America/Los_Angeles
 eof
 
 # Disable TLS when running under xen
-cat >> /etc/ld.so.conf.d/xen.conf <<eof
+if [ ${ORACLE_VER} -lt 6 ]; then
+    cat >> /etc/ld.so.conf.d/xen.conf <<eof
 # Disable TLS when the image is running under xen
 hwcap 0 nosegneg
 eof
-ldconfig
+    ldconfig
+fi
 
 # At this point the chroot contains a working minimal set of packages; start to
 # customise the install for EC2
@@ -192,10 +193,13 @@ eof
 # Configure authentication
 authconfig --enablemd5 --enableshadow --updateall
 
-# Configure SELinux for permissive mode, if config file is present
-# This allows future use of SElinux, but doesn't enforce current rules
+# Configure SELinux for enforcing mode, if config file is present
 [ -s /etc/selinux/config ] && \
-    sed -i '/^SELINUX=/cSELINUX=permissive' /etc/selinux/config
+    sed -i '/^SELINUX=/cSELINUX=enforcing' /etc/selinux/config
+
+# Only start a console on the first tty
+[ -s /etc/sysconfig/init ] && \
+    sed -i '/^ACTIVE_CONSOLES/cACTIVE_CONSOLES=/dev/tty1' /etc/sysconfig/init
 
 # Install the extra and packages
 [ -n "${EXTRA_PKGS}" ] && yum -y ${EXCLUDE} install ${EXTRA_PKGS}
@@ -213,7 +217,7 @@ chkconfig --del ddclient
 
 # Change root password to consistent value across instances, but
 # remote login is permitted only by public SSH key
-echo "${ROOT_PASSWORD}" | passwd --stdin root
+echo '${ROOT_PASSWORD}' | passwd --stdin root
 mkdir -p /root/.ssh
 touch /root/.ssh/authorized_keys2
 chmod 0700 /root/.ssh
@@ -222,7 +226,7 @@ chown -R root:root /root/.ssh
 
 # Add memes with random password
 useradd -c "Matthew Emes" -m -s /bin/bash memes
-echo "${MEMES_PASSWORD}" | passwd --stdin memes
+echo '${MEMES_PASSWORD}' | passwd --stdin memes
 mkdir -p /home/memes/.ssh
 touch /home/memes/.ssh/authorized_keys2
 chmod 0700 /home/memes/.ssh
