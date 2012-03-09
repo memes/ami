@@ -20,6 +20,8 @@ DEFAULT_IMG_SECTOR_SIZE=${DEFAULT_IMG_SECTOR_SIZE:-512}
 DEFAULT_FS_BLOCK_SIZE=${DEFAULT_FS_BLOCK_SIZE:-4096}
 DEFAULT_AMI_TMP=${DEFAULT_AMI_TMP:-~/tmp}
 DEFAULT_MINIMAL_WORKING_DIR=${DEFAULT_MINIMAL_WORKING_DIR:-~/}
+DEFAULT_KVM_MEM=${DEFAULT_KVM_MEM:-2048}
+DEFAULT_KVM_NET=${DEFAULT_KVM_NET:-virtio}
 
 # Store modified fs mounts for dev/nodev
 nodev_mounts=""
@@ -858,9 +860,10 @@ launch_img()
     # Launch image in KVM with audio and usb support, emulating IDE
     env QEMU_AUDIO_DRV=${QEMU_AUDIO_DRV:-"alsa"} \
         kvm -name "${img}" -cpu ${qemu_cpu} -soundhw ac97 \
-        -net nic,vlan=0,model=virtio,macaddr=${mac} \
+        -rtc base=utc,clock=host \
+        -net nic,vlan=0,model=${KVM_NET:-${DEFAULT_KVM_NET}},macaddr=${mac} \
         -net vde,vlan=0,sock=/var/run/vde2/tap0.ctl,mode=0660 \
-        -m 512 -usb -usbdevice tablet \
+        -m ${KVM_MEM:-${DEFAULT_KVM_MEM}} -usb -usbdevice tablet \
         -drive file="${img}",if=ide,index=0,cache=none,media=disk
 }
 
