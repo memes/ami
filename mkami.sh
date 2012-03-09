@@ -50,6 +50,9 @@ usage()
     echo "           custom file"
     echo "        -f flavour, --flavour flavour  build AMI using rules specified"
     echo "           by flavour file, defaults to ${DEFAULT_FLAVOUR}"
+    echo "        -l, --launch, try to launch an image of the ami locally; will"
+    echo "           reuse an existing image if present, or do a build without"
+    echo "           uploading the ami"
     echo
     exit 1
 }
@@ -81,6 +84,10 @@ getargs()
 		flavour="$1"
 		[ "s3" = "${flavour}" -o "ebs" = "${flavour}" ] || usage
 		;;
+	    -l|--launch)
+		AMI_SKIP=1
+		USE_EXISTING=1
+		;;
 	    *)
 		usage;
 		exit 1;
@@ -100,7 +107,17 @@ getargs()
 [ -n "${distro}" ] && prebuild_distro "${SCRIPT_DIR}" "${distro}"
 [ -n "${flavour}" ] && prebuild_flavour "${SCRIPT_DIR}" "${flavour}"
 prebuild_validate
-ec2_validate
+
+# If a launch was requested, see if there is an existing image file ready to go
+if [ -n "${USE_EXISTING}" ]; then
+    img=$(get_kvm_img_name)
+    if [ -z "${KVM_SKIP_LAUNCH}" -a -n "${img}" -a -e "${img}" ]; then
+	launch_img "${img}"
+	exit 1
+    fi
+fi
+
+[ -z "${AMI_SKIP}" ] && ec2_validate
 
 # Early initialisation of the system
 base_dir=$(get_base_directory)
