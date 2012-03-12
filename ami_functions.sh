@@ -26,6 +26,9 @@ DEFAULT_KVM_NET=${DEFAULT_KVM_NET:-virtio}
 # Store modified fs mounts for dev/nodev
 nodev_mounts=""
 
+# Store ip_forward value for cleanup
+IPV4_FORWARD=$(cat /proc/sys/net/ipv4/ip_forward)
+
 # Util to send a message to stderr and exit
 error()
 {
@@ -182,6 +185,9 @@ cleanup ()
         ${SUDO} losetup -d "${part_dev}"
     [ -n "${img_dev}" ] && isloop "${img_dev}" && \
         ${SUDO} losetup -d "${img_dev}"
+    local ipv4_forward=$(cat /proc/sys/net/ipv4/ip_forward)
+    [ ${IPV4_FORWARD} -eq ${ipv4_forward} ] || \
+	${SUDO} sh -c "echo ${IPV4_FORWARD} > /proc/sys/net/ipv4/ip_forward"
 }
 
 
