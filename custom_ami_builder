@@ -34,6 +34,22 @@ custom_post_chroot()
     [ -z "${base}" ] && error "custom_post_chroot: \$base is unspecified"
     [ -d "${base}" ] || error "custom_post_chroot: ${base} is invalid"
     ${SUDO} rsync -avP --exclude '*~' /home/memes/aws "${base}/home/memes/"
+    if [ ! -d "${base}/home/memes/ami" ]; then
+	git clone file://$(readlink -f ${SCRIPT_DIR}) "${base}/home/memes/ami"
+	(
+	    cd "${base}/home/memes/ami";
+	    git remote add -f -m master scm http://scm.matthewemes.com/ami.git;
+	    git remote add -f -m master ssh://memes@memes.zapto.org/~/projects/ami ganymede
+	)
+    fi
+    if [ -d "${base}/home/memes/ami" ]; then
+	(
+	    cd "${base}/home/memes/ami";
+	    git pull origin;
+	    git fetch scm;
+	    git fetch ganymede
+	)
+    fi
     ${SUDO} chroot "${base}" <<EOF
 [ -e /home/memes/aws ] && sudo chown -R memes:memes /home/memes/aws
 cat >> /home/memes/.profile <<eof
@@ -60,9 +76,6 @@ cat > /home/memes/.gitconfig <<eof
 	name = Matthew Emes
 	email = memes@matthewemes.com
 eof
-[ -d /home/memes/ami ] || \
-    git clone file://${SCRIPT_DIR} /home/memes/ami
-cd /home/memes/ami && git pull
 [ -d /home/memes/images ] || mkdir -p /home/memes/images
 update-rc.d -f yum-updatesd remove
 
