@@ -61,7 +61,7 @@ cat > /home/memes/.gitconfig <<eof
 	email = memes@matthewemes.com
 eof
 [ -d /home/memes/ami ] || \
-    git clone http://scm.matthewemes.com/ami.git /home/memes/ami
+    git clone file://${SCRIPT_DIR} /home/memes/ami
 cd /home/memes/ami && git pull
 [ -d /home/memes/images ] || mkdir -p /home/memes/images
 update-rc.d -f yum-updatesd remove
