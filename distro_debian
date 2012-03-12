@@ -45,6 +45,8 @@ distro_prepare_chroot()
     [ $# -ge 1 ] && base="$1"
     [ -z "${base}" ] && error "distro_prepare_chroot: \$base is unspecified"
     [ -d "${base}" ] || error "distro_prepare_chroot: ${base} is invalid"
+    SYSTZ="${SYSTEM_TZ:-${DEFAULT_SYSTEM_TZ}}"
+    USERTZ="${USER_TZ:-${DEFAULT_USER_TZ}}"
     ${SUDO} chroot "${base}" <<EOF
 export DEBIAN_FRONTEND=noninteractive
 # Recreate required devices
@@ -63,7 +65,12 @@ eof
 # Disable daemon startup during chroot population
 echo "exit 101" > /usr/sbin/policy-rc.d
 chmod 0755 /usr/sbin/policy-rc.d
-echo "America/Los_Angeles" > /etc/timezone
+# Set the time and timezone for the instance
+cat >> /etc/sysconfig/clock <<eof
+ZONE="${AMI_TZ:-${DEFAULT_TZ}}"
+eof
+cp /usr/share/zoneinfo/$(echo "${SYSTEM_TZ:-${DEFAULT_SYSTEM_TZ}}" | sed -e 's/ /_/g') \
+    /etc/localtime
 
 LC_ALL=C debconf-set-selections <<eof
 tzdata tzdata/Zones/Australia select
@@ -72,12 +79,12 @@ tzdata tzdata/Zones/SystemV select
 tzdata tzdata/Zones/Pacific select
 tzdata tzdata/Zones/Atlantic select
 tzdata tzdata/Zones/US select
-tzdata tzdata/Zones/Etc select UTC
+tzdata tzdata/Zones/Etc select
 tzdata tzdata/Zones/Arctic select
 tzdata tzdata/Zones/Antarctica select
 tzdata tzdata/Zones/Europe select
 tzdata tzdata/Zones/Africa select
-tzdata tzdata/Zones/America select Los_Angeles
+tzdata tzdata/Zones/America select
 tzdata tzdata/Areas select America
 tzdata tzdata/Zones/Indian select
 locales locales/default_environment_locale select en_US.UTF-8
@@ -109,6 +116,19 @@ ddclient ddclient/interface string
 ddclient ddclient/service select other
 ddclient ddclient/modifiedconfig note
 eof
+# Set timezone preferences
+if [ -n "${SYSTZ}" ]; then
+    LC_ALL=C debconf-set-selections <<eof
+tzdata tzdata/Zones/${SYSTZ%%/*} select ${SYSTZ##*/}
+eof
+if [ -n "${USERTZ}" ]; then
+    LC_ALL=C debconf-set-selections <<eof
+tzdata tzdata/Zones/${USERTZ%%/*} select ${USERTZ##*/}
+eof
+fi
+[ -n "${USERTZ:-${SYSTZ}}" ] && \
+    echo "${USERTZ:-${SYSTZ}}" > /etc/timezone
+
 LC_ALL=C dpkg-reconfigure --frontend noninteractive --all
 echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
 LC_ALL=C locale-gen

@@ -11,6 +11,8 @@ DEFAULT_ARCH=${DEFAULT_ARCH:-$(uname -m)}
 DEFAULT_CUSTOM=${DEFAULT_CUSTOM:-""}
 DEFAULT_FLAVOUR=${DEFAULT_FLAVOUR:-"s3"}
 DEFAULT_IMG_SIZE=${DEFAULT_IMG_SIZE:-$((1024 * 1024 * 1024))}
+DEFAULT_SYSTEM_TZ=${DEFAULT_SYSTEM_TZ:-"Etc/UTC"}
+DEFAULT_USER_TZ=${DEFAULT_USER_TZ:-"America/Los_Angeles"}
 SUDO=${SUDO:-$(which sudo)}
 
 # Try to get a sane working directory from the user or environment, fallback to 

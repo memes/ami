@@ -134,18 +134,19 @@ yum -y clean all
 
 # Set the time and timezone for the instance
 cat >> /etc/sysconfig/clock <<eof
-ZONE="America/Los Angeles"
-UTC=true
-ARC=false
+ZONE="${SYSTEM_TZ:-${DEFAULT_SYSTEM_TZ}}"
 eof
-cp /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
-cat >> /etc/profile.d/timezone.sh <<eof
-TZ=America/Los_Angeles
+cp /usr/share/zoneinfo/${SYSTEM_TZ:-${DEFAULT_SYSTEM_TZ}} \
+    /etc/localtime
+if [ -n "${USER_TZ:-${DEFAULT_USER_TZ}}" ]; then
+    cat >> /etc/profile.d/timezone.sh <<eof
+TZ="${USER_TZ:-${DEFAULT_USER_TZ}}"
 export TZ
 eof
-cat >> /etc/profile.d/timezone.csh <<eof
-setenv TZ America/Los_Angeles
+    cat >> /etc/profile.d/timezone.csh <<eof
+setenv TZ "${USER_TZ:-${DEFAULT_USER_TZ}}"
 eof
+fi
 
 # Disable TLS when running under xen
 if [ ${CENTOS_VER} -lt 6 ]; then
