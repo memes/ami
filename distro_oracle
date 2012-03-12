@@ -131,7 +131,7 @@ ZONE="America/Los Angeles"
 UTC=true
 ARC=false
 eof
-cp /usr/share/zoneinfo/America/Los_Angeles > /etc/localtime
+cp /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
 cat >> /etc/profile.d/timezone.sh <<eof
 TZ=America/Los_Angeles
 export TZ
