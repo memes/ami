@@ -572,13 +572,13 @@ update_inittab()
     dont_be_stupid "${base}"
     [ -e "${base}/etc/inittab" ] || \
         error "update_inittab: ${base}/etc/inittab does not exist"
-    ${SUDO} sed -i '/^[1-6]:[2-5]\+:.*getty/ s/^/#/g' "${base}/etc/inittab"
-    local test=$(${SUDO} grep -c '^[1-6].*getty' "${base}/etc/inittab" 2>/dev/null)
+    ${SUDO} sed -i '/^[2-6]:[2-5]\+:.*getty/ s/^/#/g' "${base}/etc/inittab"
+    local test=$(${SUDO} grep -c '^[2-6].*getty' "${base}/etc/inittab" 2>/dev/null)
     if [ "1" = "${test}" ]; then
 	# Check to see if ttys are configured elsewhere
 	if [ -e "${base}/etc/sysconfig/init" ]; then
-	    ${SUDO} sed -i '/^ACTIVE_CONSOLES/ s/^/#/g' "${base}/etc/sysconfig/init"
-	    test=$(${SUDO} grep -c '^ACTIVE_CONSOLES' "${base}/etc/sysconfig/init" 2>/dev/null)
+	    ${SUDO} sed -i '/^ACTIVE_CONSOLES/cACTIVE_CONSOLES=/dev/tty1' "${base}/etc/sysconfig/init"
+	    test=$(${SUDO} grep -c '^ACTIVE_CONSOLES=/dev/tty[^1]' "${base}/etc/sysconfig/init" 2>/dev/null)
 	    [ "1" = "${test}" ] && \
 		error "update_inittab: ${base}/etc/sysconfig/init is not updated"
 	else
