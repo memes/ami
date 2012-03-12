@@ -170,6 +170,7 @@ process_user_data()
 	# Force lowercase and split at the first =
 	key=$(echo "${data}" | tr [A-Z] [a-z] | cut -f1 -d=)
 	value=$(echo "${data}" | tr [A-Z] [a-z] | cut -f2- -d=)
+	value=$(process_embedded_tokens "${value}")
 	case "${key}" in
 	    hostname)
 		update_hostname "${value}"
@@ -181,6 +182,14 @@ process_user_data()
 		;;
 	esac
     done
+}
+
+# Replace any embedded tokens with values from instance meta-data
+process_embedded_tokens()
+{
+    echo "${value}" | \
+	sed -e "s/%%ami-instance-index%%/$(get_meta_data ami-instance-index)/g"
+    return 0
 }
 
 # Send a message
