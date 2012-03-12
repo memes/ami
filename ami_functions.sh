@@ -572,7 +572,7 @@ update_inittab()
     dont_be_stupid "${base}"
     [ -e "${base}/etc/inittab" ] || \
         error "update_inittab: ${base}/etc/inittab does not exist"
-    ${SUDO} sed -i '/^[2-6]:[2-5]\+:.*getty/ s/^/#/g' "${base}/etc/inittab"
+    ${SUDO} sed -i '/^[1-6]:[2-5]\+:.*getty/ s/^/#/g' "${base}/etc/inittab"
     local test=$(${SUDO} grep -c '^[1-6].*getty' "${base}/etc/inittab" 2>/dev/null)
     if [ "1" = "${test}" ]; then
 	# Check to see if ttys are configured elsewhere
