@@ -39,6 +39,7 @@ custom_post_chroot()
 	(
 	    cd "${base}/home/memes/ami";
 	    git remote add -f -m master scm http://scm.matthewemes.com/ami.git;
+	    git remote add -f -m master ssh://memes@memes.zapto.org/~/projects/ami ganymede
 	)
     fi
     if [ -d "${base}/home/memes/ami" ]; then
@@ -46,6 +47,7 @@ custom_post_chroot()
 	    cd "${base}/home/memes/ami";
 	    git pull origin;
 	    git fetch scm;
+	    git fetch ganymede
 	)
     fi
     ${SUDO} chroot "${base}" <<EOF
