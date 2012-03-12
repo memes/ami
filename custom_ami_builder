@@ -39,7 +39,7 @@ custom_post_chroot()
 	(
 	    cd "${base}/home/memes/ami";
 	    git remote add -f -m master scm http://scm.matthewemes.com/ami.git;
-	    git remote add -f -m master ssh://memes@memes.zapto.org/~/projects/ami ganymede
+	    git remote add -f -m master ganymede ssh://memes@memes.zapto.org/~/projects/ami
 	)
     fi
     if [ -d "${base}/home/memes/ami" ]; then
