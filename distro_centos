@@ -134,12 +134,11 @@ yum -y clean all
 
 # Set the time and timezone for the instance
 cat >> /etc/sysconfig/clock <<eof
-TIMEZONE="America/Los_Angeles"
+ZONE="America/Los Angeles"
 UTC=true
 ARC=false
 eof
-rm -f /etc/localtime && \
-    ln /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
+cp /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
 cat >> /etc/profile.d/timezone.sh <<eof
 TZ=America/Los_Angeles
 export TZ
