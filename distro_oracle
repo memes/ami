@@ -4,7 +4,18 @@
 #
 
 ORACLE_VER=${ORACLE_VER:-6}
-ORACLE_UPDATE=${ORACLE_UPDATE:-2}
+if [ -z "${ORACLE_UPDATE}" ]; then
+    case "${ORACLE_VER}" in
+	6)
+	    ORACLE_UPDATE=2
+	    ;;
+	5)
+	    ORACLE_UPDATE=8
+	    ;;
+	*)
+	    ;;
+    esac
+fi
 MIRROR_URL=${MIRROR_URL:-"http://public-yum.oracle.com"}
 MOUNTDIR=${MOUNTDIR:-"${WORKINGDIR}/oracle_${ORACLE_VER}${ORACLE_UPDATE:+U${ORACLE_UPDATE}}_${AMI_ARCH}.mnt"}
 ROOT_PKGS=${ROOT_PKGS:-"yum-utils"}
@@ -69,7 +80,7 @@ EOF
 [ol${ORACLE_VER}${ORACLE_UPDATE:+U${ORACLE_UPDATE}}_base]
 name=Oracle Linux ${ORACLE_VER}${ORACLE_UPDATE:+ U${ORACLE_UPDATE}} - ${AMI_ARCH} - base
 baseurl=${MIRROR_URL}/repo/OracleLinux/OL${ORACLE_VER}/${ORACLE_UPDATE:-0}/base/${AMI_ARCH}
-gpgkey=${MIRROR_URL}/RPM-GPG-KEY-oracle-ol6
+gpgkey=${MIRROR_URL}/RPM-GPG-KEY-oracle-ol${ORACLE_VER}
 gpgcheck=1
 enabled=1
 EOF
@@ -127,7 +138,7 @@ fi
 
 # Set the time and timezone for the instance
 cat >> /etc/sysconfig/clock <<eof
-ZONE="$(echo "${SYSTEM_TZ:-${DEFAULT_SYSTEM_TZ}}"
+ZONE="${SYSTEM_TZ:-${DEFAULT_SYSTEM_TZ}}"
 eof
 cp /usr/share/zoneinfo/${SYSTEM_TZ:-${DEFAULT_SYSTEM_TZ}} \
     /etc/localtime
@@ -155,8 +166,16 @@ fi
 
 # Install the EPEL repo package to get the signing key and access to mercurial, 
 # etc
-rpm -Uvh --nosignature \
-    http://download.fedoraproject.org/pub/epel/6/${AMI_ARCH}/epel-release-6-5.noarch.rpm
+case "${ORACLE_VER}" in
+    6) rpm -Uvh --nosignature \
+           http://download.fedoraproject.org/pub/epel/6/${AMI_ARCH}/epel-release-6-5.noarch.rpm
+       ;;
+    5) rpm -Uvh --nosignature \
+           http://download.fedoraproject.org/pub/epel/5/${AMI_ARCH}/epel-release-5-4.noarch.rpm
+       ;;
+    *)
+       ;;
+esac
 
 # Enable networking
 cat > /etc/sysconfig/network <<eof
