@@ -3,8 +3,8 @@
 # deployment
 #
 
-CENTOS_VER=${CENTOS_VER:-5.5}
-MIRROR_URL=${MIRROR_URL:-"http://mirror.centos.org/centos/${CENTOS_VER}"}
+CENTOS_VER=${CENTOS_VER:-6}
+MIRROR_URL=${MIRROR_URL:-"http://mirror.centos.org/centos-$(echo ${CENTOS_VER} | cut -d. -f1)/${CENTOS_VER}"}
 MOUNTDIR=${MOUNTDIR:-"${WORKINGDIR}/centos_${CENTOS_VER}_${AMI_ARCH}.mnt"}
 ROOT_PKGS=${ROOT_PKGS:-"yum-utils"}
 BASE_PKGS=${BASE_PKGS:-"passwd vim-minimal sudo openssh-server man shadow-utils authconfig dhclient postfix which mailx wget"}
@@ -71,21 +71,23 @@ EOF
 name=CentOS ${CENTOS_VER} - ${AMI_ARCH} - OS
 baseurl=${MIRROR_URL}/os/${AMI_ARCH}
 mirrorlist=http://mirrorlist.centos.org/?release=${CENTOS_VER}&arch=${AMI_ARCH}&repo=os
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
+gpgkey=${MIRROR_URL}/os/RPM-GPG-KEY-CentOS-$(echo ${CENTOS_VER} | cut -d. -f1)
+gpgcheck=1
 enabled=1
 
 [memes_updates]
 name=CentOS ${CENTOS_VER} - ${AMI_ARCH} - Updates
 baseurl=${MIRROR_URL}/updates/${AMI_ARCH}
 mirrorlist=http://mirrorlist.centos.org/?release=${CENTOS_VER}&arch=${AMI_ARCH}&repo=updates
+gpgkey=${MIRROR_URL}/os/RPM-GPG-KEY-CentOS-$(echo ${CENTOS_VER} | cut -d. -f1)
+gpgcheck=1
 enabled=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
 EOF
     # Install minimum set of packages in order to get functional system
     # Note: these will need to be reinstalled within the chroot to resolve
     # host/chroot rpm/yum/db differences
-    ${SUDO} yum -c /tmp/yum.conf -y --installroot="${base}" ${EXCLUDE} \
-        --disablerepo="*" --enablerepo="memes*" install ${ROOT_PKGS}
+    ${SUDO} yum -c /tmp/yum.conf -y --nogpgcheck --installroot="${base}" \
+	${EXCLUDE} --disablerepo="*" --enablerepo="memes*" install ${ROOT_PKGS}
     ${SUDO} rm -rf "${base}/root/.rpmdb"
 }
 
@@ -121,7 +123,7 @@ rpm --initdb
 # Note: the set of ROOT_PKGS should have been cached by the initial population
 # of rpms outside of the chroot so only the BASE_PKGS should need to be
 # downloaded in the chroot
-yum -y ${EXCLUDE} --disablerepo="*" --enablerepo="memes*" \
+yum -y ${EXCLUDE} --nogpgcheck --disablerepo="*" --enablerepo="memes*" \
     install ${ROOT_PKGS} ${BASE_PKGS}
 yum-complete-transaction -y ${EXCLUDE}
 find / -xdev -iname "*rpmnew" -exec rm -f {} \;
@@ -149,7 +151,7 @@ eof
 fi
 
 # Disable TLS when running under xen
-if [ ${CENTOS_VER} -lt 6 ]; then
+if [ $(echo ${CENTOS_VER} | cut -d. -f1) -lt 6 ]; then
     cat >> /etc/ld.so.conf.d/xen.conf <<eof
 # Disable TLS when the image is running under xen
 hwcap 0 nosegneg
@@ -162,8 +164,16 @@ fi
 
 # Install the EPEL repo package to get the signing key and access to mercurial, 
 # etc
-rpm -Uvh --nosignature \
-    http://dl.fedora.redhat.com/pub/epel/5/${AMI_ARCH}/epel-release-5-4.noarch.rpm
+case "$(echo ${CENTOS_VER} | cut -d. -f1)" in
+    6) rpm -Uvh --nosignature \
+           http://download.fedoraproject.org/pub/epel/6/${AMI_ARCH}/epel-release-6-5.noarch.rpm
+       ;;
+    5) rpm -Uvh --nosignature \
+           http://download.fedoraproject.org/pub/epel/5/${AMI_ARCH}/epel-release-5-4.noarch.rpm
+       ;;
+    *)
+       ;;
+esac
 
 # Enable networking
 cat > /etc/sysconfig/network <<eof
