@@ -6,7 +6,7 @@
 [ "x86_64" = "${AMI_ARCH}" ] && DEBIAN_ARCH="amd64"
 [ -z "${DEBIAN_ARCH}" ] && DEBIAN_ARCH="${AMI_ARCH}"
 
-DEBIAN_VER=${DEBIAN_VER:-lenny}
+DEBIAN_VER=${DEBIAN_VER:-stable}
 MIRROR_URL=${MIRROR_URL:-"http://ftp.us.debian.org"}
 MOUNTDIR=${MOUNTDIR:-"${WORKINGDIR}/debian_${DEBIAN_VER}_${DEBIAN_ARCH}.mnt"}
 ROOT_PKGS=${ROOT_PKGS:-"locales less bzip2 debconf-utils sudo"}
@@ -110,17 +110,18 @@ ddclient ddclient/interface string
 ddclient ddclient/service select other
 ddclient ddclient/modifiedconfig note
 eof
+
 # Set timezone preferences
-if [ -n "${SYSTZ}" ]; then
+[ -n "${SYSTZ}" ] && \
     LC_ALL=C debconf-set-selections <<eof
 tzdata tzdata/Zones/${SYSTZ%%/*} select ${SYSTZ##*/}
 eof
-fi
-if [ -n "${USERTZ}" ]; then
+
+[ -n "${USERTZ}" ] && \
     LC_ALL=C debconf-set-selections <<eof
 tzdata tzdata/Zones/${USERTZ%%/*} select ${USERTZ##*/}
 eof
-fi
+
 [ -n "${USERTZ:-${SYSTZ}}" ] && \
     echo "${USERTZ:-${SYSTZ}}" > /etc/timezone
 
@@ -142,13 +143,15 @@ eof
 ldconfig
 
 # Set the timezone for the instance shells
-cat >> /etc/profile.d/timezone.sh <<eof
-TZ=America/Los_Angeles
+if [ -n "${USER_TZ:-${DEFAULT_USER_TZ}}" ]; then
+    cat >> /etc/profile.d/timezone.sh <<eof
+TZ="${USER_TZ:-${DEFAULT_USER_TZ}}"
 export TZ
 eof
-cat >> /etc/profile.d/timezone.csh <<eof
-setenv TZ America/Los_Angeles
+    cat >> /etc/profile.d/timezone.csh <<eof
+setenv TZ "${USER_TZ:-${DEFAULT_USER_TZ}}"
 eof
+fi
 
 # Enable networking
 echo "localhost" > /etc/hostname
@@ -300,7 +303,7 @@ distro_post_kvm_image()
         error "distro_post_kvm_image: unable to rebind /proc to ${base}/proc"
     ${SUDO} mount --bind /sys "${base}/sys" || \
         error "distro_post_kvm_image: unable to rebind /sys to ${base}/sys"
-    local kernel_pkg=$(kernel_pkg)
+    local kernel_pkg=$(get_kernel_pkg)
     support_pvgrub
     if [ $? -ne 0 -a -n "${kernel_pkg}" ]; then
 	${SUDO} chroot "${base}" <<EOF
@@ -342,7 +345,7 @@ distro_get_kernel_pkg()
     [ "i386" = "${DEBIAN_ARCH}" ] && kernel_flavour=686
     [ -z "${kernel_flavour}" ] && kernel_flavour=${DEBIAN_ARCH}
     case "${DEBIAN_VER}" in
-	stable|lenny)
+	lenny)
 	    kernel_pkg="linux-image-2.6-xen-${kernel_flavour}"
 	    ;;
 	*)
