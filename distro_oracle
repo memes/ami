@@ -167,15 +167,16 @@ fi
 # Install the EPEL repo package to get the signing key and access to mercurial, 
 # etc
 case "${ORACLE_VER}" in
-    6) rpm -Uvh --nosignature \
+    6) wget -O /tmp/epel.rpm \
            http://download.fedoraproject.org/pub/epel/6/${AMI_ARCH}/epel-release-6-5.noarch.rpm
        ;;
-    5) rpm -Uvh --nosignature \
+    5) wget -O /tmp/epel.rpm \
            http://download.fedoraproject.org/pub/epel/5/${AMI_ARCH}/epel-release-5-4.noarch.rpm
        ;;
     *)
        ;;
 esac
+[ -e /tmp/epel.rpm ] && rpm -Uvh --nosignature /tmp/epel.rpm && rm /tmp/epel.rpm
 
 # Enable networking
 cat > /etc/sysconfig/network <<eof
