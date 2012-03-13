@@ -8,10 +8,7 @@ if [ -z "${ORACLE_UPDATE}" ]; then
     case "${ORACLE_VER}" in
 	6)
 	    ORACLE_UPDATE=2
-	    ;;
-	5)
-	    ORACLE_UPDATE=8
-	    ;;
+        ;;
 	*)
 	    ;;
     esac
@@ -21,6 +18,15 @@ MOUNTDIR=${MOUNTDIR:-"${WORKINGDIR}/oracle_${ORACLE_VER}${ORACLE_UPDATE:+U${ORAC
 ROOT_PKGS=${ROOT_PKGS:-"yum-utils"}
 BASE_PKGS=${BASE_PKGS:-"passwd vim-minimal sudo openssh-server man shadow-utils authconfig dhclient postfix which mailx wget git"}
 EXTRA_PKGS="${EXTRA_PKGS} s3cmd ddclient"
+
+# Validate that the settings are good
+distro_prebuild_validate()
+{
+    # Only support Oracle Linux 6
+    [ ${ORACLE_VER} -lt 6 ] && \
+        error "distro_prebuild_validate: Oracle version must be 6 or higher"
+    return 0
+}
 
 # Return the directory to use for base install
 distro_get_base_directory()
@@ -222,8 +228,10 @@ authconfig --enablemd5 --enableshadow --updateall
     sed -i '/^ACTIVE_CONSOLES/cACTIVE_CONSOLES=/dev/tty1' /etc/sysconfig/init
 
 # Install the extra and packages
-[ -n "${EXTRA_PKGS}" ] && yum -y ${EXCLUDE} install ${EXTRA_PKGS}
-[ -n "${GROUP_PKGS}" ] && yum -y ${EXCLUDE} groupinstall ${GROUP_PKGS}
+[ -n "${EXTRA_PKGS}" ] && \
+    yum -y ${EXCLUDE} install ${EXTRA_PKGS}
+[ -n "${GROUP_PKGS}" ] && \
+    yum -y ${EXCLUDE} groupinstall ${GROUP_PKGS}
 
 # Make sure rsyslog, networking and email services are enabled
 chkconfig --level 2345 rsyslog on
