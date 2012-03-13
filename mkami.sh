@@ -55,6 +55,8 @@ usage()
     echo "        -l, --launch, try to launch an image of the ami locally; will"
     echo "           reuse an existing image if present, or do a build without"
     echo "           uploading the ami"
+    echo "        -u, --upload, try to upload an ami; will reuse an existing "
+    echo "           image if present, or do a build without running in KVM"
     echo
     exit 1
 }
@@ -67,32 +69,36 @@ getargs()
     while [ -n "$1" ]; do
 	case "$1" in
 	    -d|--distro)
-		shift
-		distro="$1"
-		[ "debian" = "${distro}" -o "centos" = "${distro}" -o "oracle" = "${distro}" ] || usage
-		;;
+		    shift
+		    distro="$1"
+		    [ "debian" = "${distro}" -o "centos" = "${distro}" -o "oracle" = "${distro}" ] || usage
+		    ;;
 	    -a|--arch)
-		shift
-		AMI_ARCH="$1"
-		[ "i386" = "${AMI_ARCH}" -o "x86_64" = "${AMI_ARCH}" ] || usage
-		;;
+		    shift
+		    AMI_ARCH="$1"
+		    [ "i386" = "${AMI_ARCH}" -o "x86_64" = "${AMI_ARCH}" ] || usage
+		    ;;
 	    -c|--custom)
-		shift
-		custom="$1"
-		[ -n "${custom}" ] || usage
-		;;
+		    shift
+		    custom="$1"
+		    [ -n "${custom}" ] || usage
+		    ;;
 	    -f|--flavour)
-		shift
-		flavour="$1"
-		[ "s3" = "${flavour}" -o "ebs" = "${flavour}" ] || usage
-		;;
+		    shift
+		    flavour="$1"
+		    [ "s3" = "${flavour}" -o "ebs" = "${flavour}" ] || usage
+		    ;;
 	    -l|--launch)
-		AMI_SKIP=1
-		USE_EXISTING=1
-		;;
+		    AMI_SKIP=1
+		    USE_EXISTING=launch
+		    ;;
+        -u|--upload)
+            KVM_SKIP=1
+            USE_EXISTING=upload
+            ;;
 	    *)
-		usage;
-		exit 1;
+		    usage;
+		    exit 1;
 	esac
 	shift
     done
@@ -110,14 +116,35 @@ getargs()
 [ -n "${flavour}" ] && prebuild_flavour "${SCRIPT_DIR}" "${flavour}"
 prebuild_validate
 
-# If a launch was requested, see if there is an existing image file ready to go
-if [ -n "${USE_EXISTING}" ]; then
-    img=$(get_kvm_img_name)
-    if [ -z "${KVM_SKIP_LAUNCH}" -a -n "${img}" -a -e "${img}" ]; then
-	launch_img "${img}"
-	exit 1
-    fi
-fi
+# If a launch or upload was requested, see if there is an existing image file
+# ready to go
+case "${USE_EXISTING}" in
+    launch)
+        kvm_img=$(get_kvm_img_name)
+        if [ -z "${KVM_SKIP_LAUNCH}" -a -n "${kvm_img}" -a -e "${kvm_img}" ]; then
+	        launch_img "${kvm_img}"
+	        exit 1
+        fi
+        kvm_img=
+        ;;
+    upload)
+        ami_img="$(get_ami_img_name)"
+        ami_name="$(get_ami_name)"
+        ami_description="$(get_ami_description)"
+        ami_bucket="$(get_ami_bucket)"
+        if [ -z "${AMI_SKIP_UPLOAD}" -a -n "${ami_img}" -a -e "${ami_img}" ]; then
+            upload_ami $(basename "${ami_img}") "${ami_bucket}" "${ami_name}" \
+                "${ami_description}"
+            exit 1
+        fi
+        ami_img=
+        ami_name=
+        ami_description=
+        ami_bucket=
+        ;;
+    *)
+        ;;
+esac
 
 [ -z "${AMI_SKIP}" ] && ec2_validate
 
