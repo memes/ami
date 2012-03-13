@@ -10,6 +10,15 @@ ROOT_PKGS=${ROOT_PKGS:-"yum-utils"}
 BASE_PKGS=${BASE_PKGS:-"passwd vim-minimal sudo openssh-server man shadow-utils authconfig dhclient postfix which mailx wget"}
 EXTRA_PKGS="${EXTRA_PKGS} git s3cmd ddclient"
 
+# Validate that the settings are good
+distro_prebuild_validate()
+{
+    local major_ver=$(echo ${CENTOS_VER} | cut -d. -f1)
+    [ ${major_ver} -lt 5 ] && \
+        error "distro_prebuild_validate: ${CENTOS_VER} must be 5 or higher"
+    return 0
+}
+
 # Return the directory to use for base install
 distro_get_base_directory()
 {
