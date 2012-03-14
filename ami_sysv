@@ -188,7 +188,7 @@ process_user_data()
 process_embedded_tokens()
 {
     echo "${value}" | \
-	sed -e "s/%%ami-instance-index%%/$(get_meta_data ami-instance-index)/g"
+	sed -e "s/%%ami-launch-index%%/$(get_meta_data ami-launch-index)/g"
     return 0
 }
 
