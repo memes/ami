@@ -35,19 +35,31 @@ custom_post_chroot()
     [ -d "${base}" ] || error "custom_post_chroot: ${base} is invalid"
     ${SUDO} rsync -avP --exclude '*~' /home/memes/aws "${base}/home/memes/"
     if [ ! -d "${base}/home/memes/ami" ]; then
-	git clone file://$(readlink -f ${SCRIPT_DIR}) "${base}/home/memes/ami"
-	(
-	    cd "${base}/home/memes/ami";
-	    git remote add -f -m master scm http://scm.matthewemes.com/ami.git;
-	    git remote add -f -m master ganymede ssh://memes@memes.zapto.org/~/projects/ami
-	)
+	# Try to clone from memes.zapto.org first
+	git clone ssh://memes@memes.zapto.org/~/projects/ami \
+	    "${base}/home/memes/ami"
+	if [ -d "${base}home/memes/ami" ]; then
+	    (
+		cd "${base}/home/memes/ami";
+		git remote add -f -m master scm http://scm.matthewemes.com/ami.git;
+	    )
+	else
+	    # Clone failed; use local repository
+	    git clone file://$(readlink -f ${SCRIPT_DIR}) \
+		"${base}/home/memes/ami"
+	    (
+		cd "${base}/home/memes/ami";
+		git remote add -f -m master scm http://scm.matthewemes.com/ami.git;
+		git remote add -f -m master ganymede ssh://memes@memes.zapto.org/~/projects/ami
+	    )
+	fi
     fi
     if [ -d "${base}/home/memes/ami" ]; then
 	(
-	    cd "${base}/home/memes/ami";
-	    git pull origin;
-	    git fetch scm;
-	    git fetch ganymede
+            cd "${base}/home/memes/ami";
+            git pull origin;
+            git fetch scm;
+            git fetch ganymede
 	)
     fi
     ${SUDO} chroot "${base}" <<EOF
@@ -73,8 +85,8 @@ export DEBIAN_VER=squeeze
 eof
 cat > /home/memes/.gitconfig <<eof
 [user]
-	name = Matthew Emes
-	email = memes@matthewemes.com
+    name = Matthew Emes
+    email = memes@matthewemes.com
 eof
 [ -d /home/memes/images ] || mkdir -p /home/memes/images
 update-rc.d -f yum-updatesd remove
@@ -141,14 +153,24 @@ custom_add_memes_keys()
         error "custom_add_memes_keys: ${base} is invalid"
     local keypath=
     if [ -d /media/protected/.ssh ]; then
-	keypath="/media/protected/.ssh"
+        keypath="/media/protected/.ssh"
     else
-	keypath="/home/memes/.ssh"
+        keypath="/home/memes/.ssh"
     fi
     for key in ${keypath}/*pub
     do
-	key=$(basename "${key}")
-	[ -e "${base}/home/memes/.ssh/${key}" ] || \
-	    ${SUDO} cp "${keypath}/${key}" "${base}/home/memes/.ssh/"
+        key=$(basename "${key}")
+        [ -e "${base}/home/memes/.ssh/${key}" ] || \
+            ${SUDO} cp "${keypath}/${key}" "${base}/home/memes/.ssh/"
     done
+    [ -e "${keypath}/memes@matthewemes.com_dsa" ] && \
+        ${SUDO} cp "${keypath}/memes@matthewemes.com_dsa" \
+        "${base}/home/memes/.ssh"
+    ${SUDO} sh -c "cat > ${base}/home/memes/.ssh/config" <<EOF
+Host memes.zapto.org
+	User memes
+	Hostname memes.zapto.org
+	PreferredAuthentications publickey
+	IdentityFile /home/memes/.ssh/memes@matthewemes.com_dsa
+EOF
 }
