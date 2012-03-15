@@ -79,9 +79,6 @@ export DEFAULT_FLAVOUR=ebs
 
 # Do not attempt to perform KVM testing
 export KVM_SKIP=1
-
-# Default to squeeze releases for Debian AMIs
-export DEBIAN_VER=squeeze
 eof
 cat > /home/memes/.gitconfig <<eof
 [user]
