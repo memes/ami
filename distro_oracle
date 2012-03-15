@@ -333,7 +333,7 @@ distro_get_ami_img_name()
 # Return a name for the AMI
 distro_get_ami_name()
 {
-    echo "oracle_${ORACLE_VER}${ORACLE_UPDATE:+U${ORACLE_UPDATE}}_${AMI_ARCH}.$(date +%Y%m%d)"
+    echo "oracle_${ORACLE_VER}${ORACLE_UPDATE:+U${ORACLE_UPDATE}}_${AMI_ARCH}.$(date +%Y%m%d%H%M)"
 }
 
 # Return a description for the AMI

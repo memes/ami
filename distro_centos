@@ -329,7 +329,7 @@ distro_get_ami_img_name()
 # Return a name for the AMI
 distro_get_ami_name()
 {
-    echo "centos_${CENTOS_VER}_${AMI_ARCH}.$(date +%Y%m%d)"
+    echo "centos_${CENTOS_VER}_${AMI_ARCH}.$(date +%Y%m%d%H%M)"
 }
 
 # Return a description for the AMI

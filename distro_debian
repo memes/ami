@@ -289,7 +289,7 @@ distro_get_ami_img_name()
 # Return a name for the AMI
 distro_get_ami_name()
 {
-    echo "debian_${DEBIAN_VER}_${DEBIAN_ARCH}.$(date +%Y%m%d)"
+    echo "debian_${DEBIAN_VER}_${DEBIAN_ARCH}.$(date +%Y%m%d%H%M)"
 }
 
 # Return a description for the AMI
