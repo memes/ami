@@ -857,8 +857,9 @@ launch_img()
     [ "x86_64" = "${AMI_ARCH}" ] && qemu_cpu="qemu64"
     [ -z "${qemu_cpu}" ] && qemu_cpu="qemu32"
     
-    # Get a mac address to use
-    mac="54:52:00:00:00:`echo "obase=16; $(($$%245+10))" | bc`"
+    # Get a mac address to use; keep it constant to avoid udev problems when
+    # relaunching an instance
+    mac="54:52:00:00:00:99"
     flavour_stage launch_img "${img}"
     distro_stage launch_img "${img}"
     custom_stage launch_img "${img}"
