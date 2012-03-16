@@ -27,7 +27,7 @@ wait_for_vol_status()
 	vol_status=$(ec2-describe-volumes ${AMI_LOCATION:+--region "${AMI_LOCATION}"} $@ 2>/dev/null)
 	[ -n "${vol_status}" ] && break;
 	count=$(($count + 1))
-	sleep $(($count * ${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT}))
+	sleep ${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT}
     done
     [ ${count} -ge 10 ] && \
 	error "wait_for_vol_status: timeout waiting for volume to match requested status"
@@ -45,7 +45,7 @@ wait_for_snapshot_status()
 	snapshot_status=$(ec2-describe-snapshots ${AMI_LOCATION:+--region "${AMI_LOCATION}"} $@ 2>/dev/null)
 	[ -n "${snapshot_status}" ] && break;
 	count=$(($count + 1))
-	sleep $(($count * ${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT}))
+	sleep ${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT}
     done
     [ ${count} -ge 10 ] && \
 	error "wait_for_snapshot_status: timeout waiting for snapshot to match requested status"
