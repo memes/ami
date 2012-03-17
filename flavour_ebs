@@ -29,7 +29,7 @@ wait_for_vol_status()
 	count=$(($count + 1))
 	sleep ${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT}
     done
-    [ ${count} -ge 10 ] && \
+    [ ${count} -ge ${DEFAULT_WAIT_LOOP_COUNT} ] && \
 	error "wait_for_vol_status: timeout waiting for volume to match requested status"
     echo ${vol_status}
 }
@@ -47,7 +47,7 @@ wait_for_snapshot_status()
 	count=$(($count + 1))
 	sleep ${DEFAULT_WAIT_LOOP_TIMEOUT_INCREMENT}
     done
-    [ ${count} -ge 10 ] && \
+    [ ${count} -ge ${DEFAULT_WAIT_LOOP_COUNT} ] && \
 	error "wait_for_snapshot_status: timeout waiting for snapshot to match requested status"
     echo ${snapshot_status}
 }
