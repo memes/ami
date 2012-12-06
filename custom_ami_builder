@@ -35,31 +35,11 @@ custom_post_chroot()
     [ -d "${base}" ] || error "custom_post_chroot: ${base} is invalid"
     ${SUDO} rsync -avP --exclude '*~' /home/memes/aws "${base}/home/memes/"
     if [ ! -d "${base}/home/memes/ami" ]; then
-	# Try to clone from memes.zapto.org first
-	git clone ssh://memes@memes.zapto.org/~/projects/ami \
-	    "${base}/home/memes/ami"
-	if [ -d "${base}home/memes/ami" ]; then
-	    (
-		cd "${base}/home/memes/ami";
-		git remote add -f -m master scm http://scm.matthewemes.com/ami.git;
-	    )
-	else
-	    # Clone failed; use local repository
-	    git clone file://$(readlink -f ${SCRIPT_DIR}) \
-		"${base}/home/memes/ami"
-	    (
-		cd "${base}/home/memes/ami";
-		git remote add -f -m master scm http://scm.matthewemes.com/ami.git;
-		git remote add -f -m master ganymede ssh://memes@memes.zapto.org/~/projects/ami
-	    )
-	fi
-    fi
-    if [ -d "${base}/home/memes/ami" ]; then
+	git clone git://github.com/memes/ami.git "${base}/home/memes/ami"
+    else
 	(
             cd "${base}/home/memes/ami";
-            git pull origin;
-            git fetch scm;
-            git fetch ganymede
+            git pull
 	)
     fi
     ${SUDO} chroot "${base}" <<EOF
