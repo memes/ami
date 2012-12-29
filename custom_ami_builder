@@ -143,11 +143,4 @@ custom_add_memes_keys()
     [ -e "${keypath}/memes@matthewemes.com_dsa" ] && \
         ${SUDO} cp "${keypath}/memes@matthewemes.com_dsa" \
         "${base}/home/memes/.ssh"
-    ${SUDO} sh -c "cat > ${base}/home/memes/.ssh/config" <<EOF
-Host memes.zapto.org
-	User memes
-	Hostname memes.zapto.org
-	PreferredAuthentications publickey
-	IdentityFile /home/memes/.ssh/memes@matthewemes.com_dsa
-EOF
 }
